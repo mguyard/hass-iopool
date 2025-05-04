@@ -1,0 +1,76 @@
+---
+title: Setup
+description: Setting up the Integration
+previous: /integration
+previousTitle: Installation
+next: /integration/entities
+nextTitle: Features
+---
+
+To configure the integration, you'll need your iopool API key to connect to the iopool Cloud service.
+The `iopool` integration communicates with the iopool API to retrieve data from your EcO device.
+
+<Warning>
+This integration is provided as-is, without any warranty of any kind. The developer of this integration cannot be held liable for any issues arising from its use.
+The user installs and uses this integration at their own risk and with full knowledge of the potential implications. The data provided by this integration does not replace professional pool maintenance.
+</Warning>
+
+## Requirements
+
+1. An iopool EcO device
+2. An active iopool account
+3. Internet connectivity for your Home Assistant
+4. One of the following methods to connect your EcO sensor to the iopool cloud:
+   - **Recommended:** An [iopool Connect WiFi Gateway](https://iopool.com/en-fr/collections/accessories/products/connect-bluetooth-wi-fi-gateway) that maintains a constant Bluetooth connection to your EcO sensor and sends data to the cloud via WiFi
+   - Alternatively: Regular use of the iopool mobile app near your EcO sensor to sync data via Bluetooth (this method provides less frequent and less reliable data updates)
+
+<Info>
+The iopool Connect WiFi Gateway is strongly recommended for this integration as it provides continuous, reliable data updates. Without the gateway, data will only be updated when someone manually synchronizes the EcO sensor with their smartphone near the pool, which can lead to outdated information in Home Assistant.
+</Info>
+
+## Required Information
+
+You'll need just a few details to configure the iopool integration:
+- Your iopool API key
+
+### Getting Your API Key
+
+You can obtain your API key directly from the iopool mobile application:
+
+1. Open the iopool app on your smartphone
+2. Navigate to the `Plus` menu > `Settings` > `API Key` section
+3. Your API key should be displayed and available for copy
+
+<Info>
+The API key is used to securely access your pool data through the iopool API.
+</Info>
+
+## Integration Setup in Home Assistant
+
+Start the setup process by clicking the button below:
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=iopool)
+
+The setup process is simple:
+- Enter your `API Key`
+
+Fill in the API key field and click `Submit`.
+A success popup will appear where you can select an area for your iopool device.
+
+Click `Finish` to complete the setup! 🎉
+
+<Success>
+Please check your Home Assistant logs to ensure there are no errors related to the iopool Integration.
+[![Open your Home Assistant instance and view your Home Assistant logs.](https://my.home-assistant.io/badges/logs.svg)](https://my.home-assistant.io/redirect/logs/?)
+</Success>
+
+## Features and Sensors
+
+The iopool integration will automatically create the following sensors for each of your pools:
+
+1. **Temperature** - The current temperature of your pool water
+2. **pH** - The pH level of your pool water
+3. **ORP** - The oxidation-reduction potential of your pool water
+4. **Mode** - The current mode of your iopool device
+5. **Action Required** - A binary sensor that indicates if any action is needed for your pool maintenance
+
+All sensors include additional attributes such as measurement validity, measurement mode, and timestamp of the last measurement.

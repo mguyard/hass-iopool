@@ -1,0 +1,102 @@
+---
+title: Entities
+description: All entities exposed to Home Assistant
+previous: /integration/setup
+previousTitle: Setup
+next: /misc/contributing
+nextTitle: Misc
+---
+
+## List of entities
+
+The iopool integration creates a device for each pool detected through the API, and each pool device includes multiple sensor entities.
+
+| Sensor Type          | Description                                                         |
+| -------------------- | ------------------------------------------------------------------- |
+| Temperature          | The water temperature of your pool                                  |
+| pH                   | The pH level of your pool water                                     |
+| ORP                  | Oxidation-Reduction Potential measured in mV                        |
+| Mode                 | The current operating mode of your iopool device                    |
+| Filtration Duration  | Recommended daily filtration time in minutes                        |
+| Action Required      | Binary sensor indicating if maintenance action is needed            |
+
+<Info>
+All entities are refreshed every `5 minutes` by default through polling the iopool API.
+</Info>
+
+## Temperature Sensor
+
+The temperature sensor displays the current water temperature of your pool.
+
+<Info>
+The ideal temperature depends on the type of pool or spa and personal preferences. Swimming pools are typically maintained between 24°C and 28°C (75°F and 82°F), while spas and hot tubs are usually kept at higher temperatures between 36°C and 40°C (96°F and 104°F).
+</Info>
+
+Attributes:
+- `measured_at`: Timestamp of when the measurement was taken
+- `is_valid`: Boolean indicating if the measurement is considered valid
+- `measure_mode`: The mode in which the measurement was taken (standard, live, maintenance, etc.)
+
+## pH Sensor
+
+The pH sensor shows the acidity/alkalinity level of your pool water on a scale from 0 to 14, with 7 being neutral.
+
+<Info>
+The recommended pH level for swimming pools is between 7.1 and 7.7. Maintaining proper pH levels is crucial for swimmer comfort, effective chlorine disinfection, and to prevent equipment corrosion.
+</Info>
+
+Attributes:
+- `measured_at`: Timestamp of when the measurement was taken
+- `is_valid`: Boolean indicating if the measurement is considered valid
+- `measure_mode`: The mode in which the measurement was taken
+
+## ORP Sensor
+
+The ORP (Oxidation-Reduction Potential) sensor indicates the sanitizing potential of your pool water, measured in millivolts (mV). Higher values generally indicate better disinfection.
+
+<Info>
+The ideal ORP range for swimming pools is between 650mV and 800mV. An ORP level in this range typically indicates that the sanitizer (chlorine, bromine, etc.) is effectively killing bacteria and other contaminants.
+</Info>
+
+Attributes:
+- `measured_at`: Timestamp of when the measurement was taken
+- `is_valid`: Boolean indicating if the measurement is considered valid
+- `measure_mode`: The mode in which the measurement was taken
+
+## Mode Sensor
+
+This sensor displays the current operating mode of your iopool device, which can be one of:
+- `standard`: Normal operating mode
+- `live`: Real-time monitoring mode
+- `maintenance`: Device is in maintenance mode
+- `manual`: Manual measurement mode
+- `backup`: Backup mode
+- `gateway`: Connected through gateway
+
+## Filtration Duration Sensor
+
+This sensor provides the recommended daily filtration time for your pool based on water temperature and other factors, measured in minutes.
+
+<Info>
+The filtration duration is calculated based on your pool size, current water temperature, and pump capacity. From experience, this recommended value is quite reliable and following it helps maintain proper water circulation and cleanliness. Proper filtration is essential for effective chemical distribution and preventing algae growth.
+</Info>
+
+## Action Required Binary Sensor
+
+<Card title="Action Required Sensor" icon="alert">
+This binary sensor indicates whether your pool needs maintenance attention. When `ON`, it suggests that some action is needed based on the current water parameters. Check the iopool app for specific recommendations.
+</Card>
+
+This binary sensor will be `ON` when action is required and `OFF` when your pool parameters are within optimal ranges or when treatment is in progress.
+
+## Common Entity Attributes
+
+Most iopool sensors include these common attributes:
+
+```yaml
+measured_at: "2023-06-15T14:32:10+00:00"  # When the measurement was taken
+is_valid: true                            # Whether the measurement is valid
+measure_mode: "standard"                  # The measurement mode used
+```
+
+You can access these attributes in automations or templates to create more advanced monitoring solutions for your pool.

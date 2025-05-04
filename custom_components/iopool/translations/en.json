@@ -1,0 +1,30 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "Device is already configured",
+            "no_changes": "No configuration changes detected.",
+            "reconfigure_successful": "Reconfiguration successful."
+        },
+        "error": {
+            "cannot_connect": "Failed to connect to iopool server",
+            "invalid_auth": "Invalid API key",
+            "unknown": "Unexpected error"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "api_key": "API Key"
+                },
+                "description": "Retrieve your API Key in the IOPool app:\n1. Open the IOPool app\n2. Go to Settings > API Key\n3. Copy the API Key and paste it here.",
+                "title": "iopool Configuration"
+            },
+            "reconfigure": {
+              "title": "iopool Configuration",
+              "description": "Retrieve your API Key in the IOPool app:\n1. Open the IOPool app\n2. Go to Settings > API Key\n3. Copy the API Key and paste it here.",
+              "data": {
+                "api_key": "API Key"
+              }
+            }
+        }
+    }
+}

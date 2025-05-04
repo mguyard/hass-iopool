@@ -1,0 +1,30 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "L'appareil est déjà configuré",
+            "no_changes": "Aucun changement de configuration détecté.",
+            "reconfigure_successful": "Reconfiguration réussie."
+        },
+        "error": {
+            "cannot_connect": "Échec de connexion au serveur iopool",
+            "invalid_auth": "Clé API invalide",
+            "unknown": "Erreur inattendue"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "api_key": "Clé API"
+                },
+                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+                "title": "Configuration iopool"
+            },
+            "reconfigure": {
+              "title": "Configuration iopool",
+              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+              "data": {
+                "api_key": "Clé API"
+              }
+            }
+        }
+    }
+}

@@ -1,0 +1,86 @@
+---
+image: https://brands.home-assistant.io/iopool/icon.png
+next: /integration
+nextTitle: Installation
+---
+
+<Badges>
+    <Image src="https://img.shields.io/github/license/mguyard/hass-iopool?style=default&color=0080ff" alt="License" />
+    <Image src="https://img.shields.io/github/last-commit/mguyard/hass-iopool?style=default&color=0080ff" alt="Last Commit" />
+    <Image src="https://img.shields.io/github/languages/top/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-top-language" />
+    <Image src="https://img.shields.io/github/languages/count/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-language-count" />
+</Badges>
+<Badges>
+    <Image src="https://img.shields.io/github/v/release/mguyard/hass-iopool?label=Stable" alt="Last Stable Release" />
+    <Image src="https://img.shields.io/github/release-date/mguyard/hass-iopool?label=Stable" alt="Last Release Date Stable" />
+    <Image src="https://img.shields.io/github/v/release/mguyard/hass-iopool?label=Beta&include_prereleases" alt="Last Beta Release" />
+    <Image src="https://img.shields.io/github/release-date-pre/mguyard/hass-iopool?label=Beta" alt="Last Release Date Beta" />
+    <Image src="https://img.shields.io/github/issues-search/mguyard/hass-iopool?query=label%3Abug%20is%3Aopened&label=Open%20Bugs" alt="Open Bugs" />
+    <Image src="https://img.shields.io/github/issues-pr/mguyard/hass-iopool" alt="Open PRs" />
+</Badges>
+<Badges>
+    <Image src="https://github.com/mguyard/hass-iopool/actions/workflows/home-assistant.yaml/badge.svg" alt="Home Assistant Actions" />
+    <Image src="https://github.com/mguyard/hass-iopool/actions/workflows/release.yaml/badge.svg" alt="Release Actions" />
+</Badges>
+
+# Introduction
+
+The iopool integration for Home Assistant allows you to seamlessly connect and monitor your iopool EcO pool system within the Home Assistant platform.
+This integration provides real-time monitoring of your pool parameters, enabling you to track temperature, pH, ORP (oxidation-reduction potential), and other important data directly from Home Assistant.
+
+Additionally, it supports various sensors and informs you when actions are required to maintain your pool's water quality.
+
+With this integration, you can enhance the management of your pool by integrating the iopool system with Home Assistant's powerful automation and monitoring capabilities.
+
+# Who is iopool
+
+[iopool](https://iopool.com) is an innovative company specializing in smart swimming pool monitoring solutions.
+They offer connected devices such as the EcO that analyze your pool's water quality and provide personalized recommendations to maintain healthy water.
+
+With a focus on user-friendliness and technology, [iopool](https://iopool.com) simplifies pool maintenance by providing real-time analysis and tailored advice, making pool management accessible to all pool owners.
+
+<Info>
+This development is not affiliated with the iopool brand. I am an independent developer and do not represent the iopool brand.
+</Info>
+
+# Features
+
+The iopool integration for Home Assistant provides the following features:
+
+- Sensors for temperature, pH, and ORP (oxidation-reduction potential)
+- Binary sensor indicating if action is required for your pool
+- Information about the measurement mode being used
+- Data about measurement validity and timestamp
+
+These features allow you to effectively monitor your pool and integrate this data into your Home Assistant automations.
+
+# Save Money with iopool Referral Program
+
+If you're not yet an iopool customer and are planning to purchase an EcO sensor, you can use my referral link to **save €25** on your purchase of [https://iopool.com/en-fr/collections/start-packs](any EcO Start package), including the EcO Start + Bluetooth-WiFi Gateway bundle.
+
+As a referrer, I'll also receive a €25 voucher. This is a way for you to save money while supporting the development of this integration at no additional cost to you.
+
+<Card title="How to Get Your €25 Discount" icon="tag">
+  Follow these simple steps:
+  
+  1. Click on [this referral link](http://iopool.refr.cc/marc25)
+  2. Claim your €25 discount voucher
+3. Complete your purchase of any EcO Start package with your discount voucher applied
+</Card>
+
+<Info>
+If you already have an iopool account but have never made a purchase, you can contact iopool support to request deletion of your account. This will allow you to create a new account and take advantage of the discount. Alternatively, you can create an account with a different email address.
+</Info>
+
+# Responsibility
+
+<Warning>
+Please note that this integration is provided as-is, without any warranty of any kind. The developer of this integration cannot be held liable for any issues arising from its use.
+The user installs and uses this integration at their own risk and with full knowledge of the potential implications. The data provided by this integration does not replace professional pool maintenance.
+</Warning>
+
+<!--  Custom component to show Github Badges on a oneline : https://use.docs.page/components/custom  -->
+
+export const Badges = props => {
+  return <div class="justify-center items-center flex flex-wrap gap-2">{props.children}</div>;
+};
