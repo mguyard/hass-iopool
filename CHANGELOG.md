@@ -1,3 +1,11 @@
+## [1.0.1](https://github.com/mguyard/hass-iopool/compare/v1.0.0...v1.0.1) (2025-07-06)
+
+
+### Bug Fixes
+
+* **translation:** 🔧 Remove unused state in fr.json ([ce1156c](https://github.com/mguyard/hass-iopool/commit/ce1156c572cb46852be070cae9e65d19defa63fc))
+* **translations:** 🐛 Update API key description for clarity ([1ed01f8](https://github.com/mguyard/hass-iopool/commit/1ed01f80e439cea53da45e7054e5edde30c20359))
+
 ## [1.0.1-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.0.0...v1.0.1-beta.1) (2025-07-06)
 
 
