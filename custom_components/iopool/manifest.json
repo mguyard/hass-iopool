@@ -10,5 +10,6 @@
   "issue_tracker": "https://github.com/mguyard/hass-iopool/issues",
   "quality_scale": "bronze",
   "requirements": [],
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "translations": ["en", "fr"]
 }

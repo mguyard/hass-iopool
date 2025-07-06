@@ -3,11 +3,14 @@
         "abort": {
             "already_configured": "Device is already configured",
             "no_changes": "No configuration changes detected.",
-            "reconfigure_successful": "Reconfiguration successful."
+            "reconfigure_successful": "Reconfiguration successful.",
+            "no_pools_found": "No pools found. Please check your iopool sensor is under this API key.",
+            "no_new_pools": "No new pools found. All pools are already configured."
         },
         "error": {
             "cannot_connect": "Failed to connect to iopool server",
             "invalid_auth": "Invalid API key",
+            "no_pool_selected": "No pool selected",
             "unknown": "Unexpected error"
         },
         "step": {
@@ -18,12 +21,126 @@
                 "description": "Retrieve your API Key in the IOPool app:\n1. Open the IOPool app\n2. Go to Settings > API Key\n3. Copy the API Key and paste it here.",
                 "title": "iopool Configuration"
             },
+            "choose_pool": {
+                "title": "Select Pool",
+                "description": "Select the pool you want to configure.",
+                "data": {
+                    "pool": "Select Pool"
+                }
+            },
             "reconfigure": {
               "title": "iopool Configuration",
               "description": "Retrieve your API Key in the IOPool app:\n1. Open the IOPool app\n2. Go to Settings > API Key\n3. Copy the API Key and paste it here.",
               "data": {
                 "api_key": "API Key"
               }
+            }
+        }
+    },
+    "options": {
+        "abort": {
+            "no_changes": "No configuration changes detected."
+        },
+        "error": {
+            "switch_entity_missing": "Switch entity is required when filtration (summer or winter) is enabled.",
+            "summer_slot1_start_missing": "Summer Mode - Slot #1 Start Time is required.",
+            "summer_slot1_duration_percent_missing": "Summer Mode - Slot #1 Percentage is required.",
+            "summer_slot2_start_missing": "Summer Mode - Slot #2 Start Time is required.",
+            "summer_slot2_duration_percent_missing": "Summer Mode - Slot #2 Percentage is required.",
+            "min_duration_greater_than_max_duration": "Minimum duration cannot be greater than maximum duration.",
+            "slot1_start_greater_than_equal_slot2_start": "Summer Mode - Slot #1 Start Time must be before than Slot #2 Start Time.",
+            "slot1_and_slot2_duration_percent_greater_than_100": "Summer Mode - Slot #1 and Slot #2 Percentages must add up to 100%.",
+            "slot2_start_missing": "Summer Mode - Slot #2 Start Time is required when Slot #2 Percentage is greater than 0.",
+            "winter_start_missing": "Winter Mode - Start Time is required.",
+            "winter_duration_missing": "Winter Mode - Duration is required."
+        },
+        "step": {
+            "init": {
+                "title": "iopool Options",
+                "description": "Configure IOPool options.",
+                "sections": {
+                    "filtration": {
+                        "name": "Filtration",
+                        "description": "Configure automatic filtration settings.",
+                        "data": {
+                            "switch_entity": "Switch entity to control filtration",
+                            "summer_filtration.status": "Summer Mode - Enable automatic filtration",
+                            "summer_filtration.min_duration": "Summer Mode - Minimum duration (minutes)",
+                            "summer_filtration.max_duration": "Summer Mode - Maximum duration (minutes)",
+                            "summer_filtration.slot1.name": "Summer Mode - Slot #1 Name",
+                            "summer_filtration.slot1.start": "Summer Mode - Slot #1 Start Time",
+                            "summer_filtration.slot1.duration_percent": "Summer Mode - Slot #1 Percentage",
+                            "summer_filtration.slot2.name": "Summer Mode - Slot #2 Name",
+                            "summer_filtration.slot2.start": "Summer Mode - Slot #2 Start Time",
+                            "summer_filtration.slot2.duration_percent": "Summer Mode - Slot #2 Percentage",
+                            "winter_filtration.status": "Winter Mode - Enable automatic filtration",
+                            "winter_filtration.start": "Winter Mode - Start Time",
+                            "winter_filtration.duration": "Winter Mode - Duration (minutes)"
+                        },
+                        "data_description": {
+                            "switch_entity": "Select the switch entity who will control the filtration (pool pump).",
+                            "summer_filtration.status": "Enable or disable automatic summer filtration.",
+                            "summer_filtration.min_duration": "Minimum duration for summer filtration in minutes. Overrides iopool recommendation.\nEmpty or 0 means no minimum duration.",
+                            "summer_filtration.max_duration": "Maximum duration for summer filtration in minutes. Overrides iopool recommendation.\nEmpty or 0 means no maximum duration.",
+                            "summer_filtration.slot1.name": "Name of the first slot for summer filtration.",
+                            "summer_filtration.slot1.start": "Start time of the first slot for summer filtration.",
+                            "summer_filtration.slot1.duration_percent": "Summer Mode - Percentage of the first slot. All slots must add up to 100%.",
+                            "summer_filtration.slot2.name": "Name of the second slot for summer filtration.",
+                            "summer_filtration.slot2.start": "Start time of the second slot for summer filtration.",
+                            "summer_filtration.slot2.duration_percent": "Summer Mode - Percentage of the second slot. All slots must add up to 100%.",
+                            "winter_filtration.status": "Enable or disable automatic active winter filtration.",
+                            "winter_filtration.start": "Start time for winter filtration.",
+                            "winter_filtration.duration": "Duration for winter filtration in minutes."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "action_required": {
+                "name": "Action Required"
+            },
+            "filtration": {
+                "name": "Filtration"
+            }
+        },
+        "sensor": {
+            "temperature": {
+                "name": "Temperature"
+            },
+            "ph": {
+                "name": "pH"
+            },
+            "orp": {
+                "name": "ORP"
+            },
+            "filtration_recommendation": {
+                "name": "Filtration Recommendation"
+            },
+            "iopool_mode": {
+                "name": "Mode"
+            }
+        },
+        "select": {
+            "boost_selector": {
+                "name": "Boost Selector",
+                "state": {
+                    "None": "None",
+                    "1H": "1 Hour",
+                    "4H": "4 Hours",
+                    "8H": "8 Hours",
+                    "24H": "24 Hours"
+                }
+            },
+            "pool_mode": {
+                "name": "Pool Mode",
+                "state": {
+                    "Standard": "Standard",
+                    "Active-Winter": "Active wintering",
+                    "Passive-Winter": "Passive wintering"
+                }
             }
         }
     }
