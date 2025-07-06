@@ -1,0 +1,182 @@
+---
+title: Entities
+description: All entities exposed to Home Assistant
+previous: /integration/setup
+previousTitle: Setup
+next: /integration/events
+nextTitle: Events
+---
+
+## List of entities
+
+The iopool integration creates a device for each pool detected through the API, and each pool device includes multiple entities.
+
+| Entity Type                | Description                                                                                      | Availability                                                      |
+| -------------------------- | ------------------------------------------------------------------------------------------------|-------------------------------------------------------------------|
+| Temperature (sensor)       | The water temperature of your pool                                                              | Always                                                            |
+| pH (sensor)                | The pH level of your pool water                                                                 | Always                                                            |
+| ORP (sensor)               | Oxidation-Reduction Potential measured in mV                                                    | Always                                                            |
+| Mode (sensor)              | The current operating mode of your iopool device                                                | Always                                                            |
+| Filtration Recommendation (sensor) | Recommended daily filtration time in minutes                                            | Always                                                            |
+| Elapsed Filtration Duration (sensor) | Total filtration time elapsed today (in minutes)                                      | **Advanced**: Only if filtration automation is enabled            |
+| Action Required (binary_sensor)     | Indicates if maintenance action is needed                                              | Always                                                            |
+| Filtration (binary_sensor)          | Indicates if the filtration system is currently running                                | **Advanced**: Only if filtration automation is enabled            |
+| Boost Selector (select)             | Allows temporary boost of filtration (1h, 4h, 8h, 24h)                                 | **Advanced**: Only if filtration automation is enabled            |
+| Pool Mode (select)                  | Allows switching between Standard, Active-Winter, Passive-Winter modes                 | **Advanced**: Only if filtration automation is enabled            |
+
+<Info>
+All entities are refreshed every `5 minutes` by default through polling the iopool API.
+</Info>
+
+---
+
+## Temperature Sensor
+
+Displays the current water temperature of your pool.
+
+<Info>
+The ideal temperature depends on the type of pool or spa and personal preferences. Swimming pools are typically maintained between 24°C and 28°C (75°F and 82°F), while spas and hot tubs are usually kept at higher temperatures between 36°C and 40°C (96°F and 104°F).
+</Info>
+
+**Attributes:**
+- `measured_at`: Timestamp of when the measurement was taken
+- `is_valid`: Boolean indicating if the measurement is considered valid
+- `measure_mode`: The mode in which the measurement was taken (standard, live, maintenance, etc.)
+
+---
+
+## pH Sensor
+
+Shows the acidity/alkalinity level of your pool water on a scale from 0 to 14, with 7 being neutral.
+
+<Info>
+The recommended pH level for swimming pools is between 7.1 and 7.7. Maintaining proper pH levels is crucial for swimmer comfort, effective chlorine disinfection, and to prevent equipment corrosion.
+</Info>
+
+**Attributes:**
+- `measured_at`
+- `is_valid`
+- `measure_mode`
+
+---
+
+## ORP Sensor
+
+Indicates the sanitizing potential of your pool water, measured in millivolts (mV). Higher values generally indicate better disinfection.
+
+<Info>
+The ideal ORP range for swimming pools is between 650mV and 800mV. An ORP level in this range typically indicates that the sanitizer (chlorine, bromine, etc.) is effectively killing bacteria and other contaminants.
+</Info>
+
+**Attributes:**
+- `measured_at`
+- `is_valid`
+- `measure_mode`
+
+---
+
+## Mode Sensor
+
+Displays the current operating mode of your iopool device, which can be one of:
+- `standard`: Normal operating mode
+- `live`: Real-time monitoring mode
+- `maintenance`: Device is in maintenance mode
+- `manual`: Manual measurement mode
+- `backup`: Backup mode
+- `gateway`: Connected through gateway
+
+---
+
+## Filtration Recommendation Sensor
+
+Provides the recommended daily filtration time for your pool based on water temperature and other factors, measured in minutes.
+
+<Info>
+The filtration duration is calculated based on your pool size, current water temperature, and pump capacity. Following this recommendation helps maintain proper water circulation and cleanliness.
+</Info>
+
+---
+
+## Elapsed Filtration Duration Sensor (Advanced)
+
+Shows the total filtration time elapsed today (in minutes).
+
+<Info>
+**This sensor is only available if filtration automation is enabled and a switch entity is configured in the integration options.**
+</Info>
+
+---
+
+## Action Required Binary Sensor
+
+<Card title="Action Required Sensor" icon="alert">
+This binary sensor indicates whether your pool needs maintenance attention. When `ON`, it suggests that some action is needed based on the current water parameters. Check the iopool app for specific recommendations.
+</Card>
+
+---
+
+## Filtration Binary Sensor (Advanced)
+
+Indicates if the filtration system is currently running.
+
+<Info>
+**This binary sensor is only available if filtration automation is enabled and a switch entity is configured in the integration options.**
+</Info>
+
+**Attributes:**
+- `filtration_mode`: Current pool mode (`Standard`, `Active-Winter`, `Passive-Winter`)
+- `slot1_start_time`, `slot1_end_time`: Start/end time for summer slot 1 (if applicable)
+- `slot2_start_time`, `slot2_end_time`: Start/end time for summer slot 2 (if applicable)
+- `winter_filtration_start`, `winter_filtration_end`: Start/end time for winter filtration (if applicable)
+- `next_stop_time`: Next scheduled stop time for filtration (if applicable)
+- `active_slot`: Current active slot (`1`, `2`, or `"winter"`)
+
+---
+
+## Boost Selector (Advanced)
+
+Allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h.
+
+<Info>
+**This select entity is only available if filtration automation is enabled and a switch entity is configured in the integration options.**
+</Info>
+
+Options :
+- `None`
+- `1H`
+- `4H`
+- `8H`
+- `24H`
+
+**Attributes:**
+- `boost_start_time`: When the boost started (if active)
+- `boost_end_time`: When the boost will end (if active)
+
+---
+
+## Pool Mode Selector (Advanced)
+
+Allows you to switch between Standard, Active-Winter, and Passive-Winter modes.
+
+<Info>
+**This select entity is only available if filtration automation is enabled and a switch entity is configured in the integration options.**
+</Info>
+
+Options :
+- `Standard`
+- `Active-Winter`
+- `Passive-Winter`
+
+---
+
+## Common Entity Attributes
+
+The following attributes are available for all iopool sensors **except filtration-related entities** (such as Filtration Binary Sensor, Boost Selector, Pool Mode Selector, and Elapsed Filtration Duration):
+
+```yaml
+measured_at: "2023-06-15T14:32:10+00:00"  # When the measurement was taken
+is_valid: true                            # Whether the measurement is valid
+measure_mode: "standard"                  # The measurement mode used
+```
+
+You can access these attributes in automations or templates to create more advanced monitoring solutions for your pool.

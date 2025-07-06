@@ -1,0 +1,147 @@
+{
+    "config": {
+        "abort": {
+            "already_configured": "L'appareil est déjà configuré",
+            "no_changes": "Aucun changement de configuration détecté.",
+            "reconfigure_successful": "Reconfiguration réussie.",
+            "no_pools_found": "Aucune piscine trouvée. Veuillez vérifier que votre capteur iopool est sous cette clé API.",
+            "no_new_pools": "Aucune nouvelle piscine trouvée. Toutes les piscines sont déjà configurées."
+        },
+        "error": {
+            "cannot_connect": "Échec de la connexion au serveur iopool",
+            "invalid_auth": "Clé API invalide",
+            "no_pool_selected": "Aucune piscine sélectionnée",
+            "unknown": "Erreur inattendue"
+        },
+        "step": {
+            "user": {
+                "data": {
+                    "api_key": "Clé API"
+                },
+                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+                "title": "Configuration iopool"
+            },
+            "choose_pool": {
+                "title": "Sélectionner une piscine",
+                "description": "Sélectionnez la piscine que vous souhaitez configurer.",
+                "data": {
+                    "pool": "Sélectionner une piscine"
+                }
+            },
+            "reconfigure": {
+              "title": "Configuration iopool",
+              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+              "data": {
+                "api_key": "Clé API"
+              }
+            }
+        }
+    },
+    "options": {
+        "abort": {
+            "no_changes": "Aucun changement de configuration détecté."
+        },
+        "error": {
+            "switch_entity_missing": "L'entité interrupteur est requise lorsque la filtration (été ou hiver) est activée.",
+            "summer_slot1_start_missing": "Mode été - L'heure de début du créneau #1 est requise.",
+            "summer_slot1_duration_percent_missing": "Mode été - Le pourcentage du créneau #1 est requis.",
+            "summer_slot2_start_missing": "Mode été - L'heure de début du créneau #2 est requise.",
+            "summer_slot2_duration_percent_missing": "Mode été - Le pourcentage du créneau #2 est requis.",
+            "min_duration_greater_than_max_duration": "La durée minimale ne peut pas être supérieure à la durée maximale.",
+            "slot1_start_greater_than_equal_slot2_start": "Mode été - L'heure de début du créneau #1 doit être avant celle du créneau #2.",
+            "slot1_and_slot2_duration_percent_greater_than_100": "Mode été - Les pourcentages des créneaux #1 et #2 doivent totaliser 100%.",
+            "slot2_start_missing": "Mode été - L'heure de début du créneau #2 est requise lorsque le pourcentage du créneau #2 est supérieur à 0.",
+            "winter_start_missing": "Mode hiver - L'heure de début est requise.",
+            "winter_duration_missing": "Mode hiver - La durée est requise."
+        },
+        "step": {
+            "init": {
+                "title": "Options iopool",
+                "description": "Configurer les options IOPool.",
+                "sections": {
+                    "filtration": {
+                        "name": "Filtration",
+                        "description": "Configurer les paramètres de filtration automatique.",
+                        "data": {
+                            "switch_entity": "Entité interrupteur pour contrôler la filtration",
+                            "summer_filtration.status": "Mode été - Activer la filtration automatique",
+                            "summer_filtration.min_duration": "Mode été - Durée minimale (minutes)",
+                            "summer_filtration.max_duration": "Mode été - Durée maximale (minutes)",
+                            "summer_filtration.slot1.name": "Mode été - Nom du créneau #1",
+                            "summer_filtration.slot1.start": "Mode été - Heure de début du créneau #1",
+                            "summer_filtration.slot1.duration_percent": "Mode été - Pourcentage du créneau #1",
+                            "summer_filtration.slot2.name": "Mode été - Nom du créneau #2",
+                            "summer_filtration.slot2.start": "Mode été - Heure de début du créneau #2",
+                            "summer_filtration.slot2.duration_percent": "Mode été - Pourcentage du créneau #2",
+                            "winter_filtration.status": "Mode hiver - Activer la filtration automatique",
+                            "winter_filtration.start": "Mode hiver - Heure de début",
+                            "winter_filtration.duration": "Mode hiver - Durée (minutes)"
+                        },
+                        "data_description": {
+                            "switch_entity": "Sélectionnez l'entité interrupteur qui contrôlera la filtration (pompe de la piscine).",
+                            "summer_filtration.status": "Activer ou désactiver la filtration automatique d'été.",
+                            "summer_filtration.min_duration": "Durée minimale pour la filtration d'été en minutes. Remplace la recommandation iopool.\nVide ou 0 signifie aucune durée minimale.",
+                            "summer_filtration.max_duration": "Durée maximale pour la filtration d'été en minutes. Remplace la recommandation iopool.\nVide ou 0 signifie aucune durée maximale.",
+                            "summer_filtration.slot1.name": "Nom du premier créneau pour la filtration d'été.",
+                            "summer_filtration.slot1.start": "Heure de début du premier créneau pour la filtration d'été.",
+                            "summer_filtration.slot1.duration_percent": "Mode été - Pourcentage du premier créneau. Tous les créneaux doivent totaliser 100%.",
+                            "summer_filtration.slot2.name": "Nom du second créneau pour la filtration d'été.",
+                            "summer_filtration.slot2.start": "Heure de début du second créneau pour la filtration d'été.",
+                            "summer_filtration.slot2.duration_percent": "Mode été - Pourcentage du second créneau. Tous les créneaux doivent totaliser 100%.",
+                            "winter_filtration.status": "Activer ou désactiver la filtration active d'hiver automatique.",
+                            "winter_filtration.start": "Heure de début pour la filtration d'hiver.",
+                            "winter_filtration.duration": "Durée pour la filtration d'hiver en minutes."
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "entity": {
+        "binary_sensor": {
+            "action_required": {
+                "name": "Action requise"
+            },
+            "filtration": {
+                "name": "Filtration"
+            }
+        },
+        "sensor": {
+            "temperature": {
+                "name": "Température"
+            },
+            "ph": {
+                "name": "pH"
+            },
+            "orp": {
+                "name": "ORP"
+            },
+            "filtration_recommendation": {
+                "name": "Recommandation de filtration"
+            },
+            "iopool_mode": {
+                "name": "Mode"
+            }
+        },
+        "select": {
+            "boost_selector": {
+                "name": "Sélecteur Boost",
+                "state": {
+                    "None": "Aucun",
+                    "1H": "1 Heure",
+                    "4H": "4 Heures",
+                    "8H": "8 Heures",
+                    "24H": "24 Heures"
+                }
+            },
+            "pool_mode": {
+                "name": "Mode piscine",
+                "state": {
+                    "Standard": "Standard",
+                    "Active-Winter": "Hivernage actif",
+                    "Passive-Winter": "Hivernage passif"
+                }
+            }
+        }
+    }
+}

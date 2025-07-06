@@ -1,0 +1,199 @@
+---
+title: Events
+previous: /integration/entities
+previousTitle: Entities
+next: /misc/contributing
+nextTitle: Misc
+---
+
+When the iopool integration triggers internal actions or scheduled events (such as filtration slot start/end, boost, or mode changes), it publishes events to the [Home Assistant Event Bus](https://my.home-assistant.io/redirect/developer_events/).  
+All events use the event type `IOPOOL_EVENT`.
+
+<Image src="/images/devtool-events.png" alt="HA DevTool Events" />
+
+## Event: `IOPOOL_EVENT`
+
+All iopool events are published under the event type `IOPOOL_EVENT`.  
+You can use these events in Home Assistant automations to trigger notifications, scripts, or other actions based on pool status changes, filtration cycles, or recommendations.
+
+### Event Structure
+
+Each event has the following structure:
+
+```yaml
+event_type: IOPOOL_EVENT
+data:
+  type: <EVENT_TYPE>
+  pool_id: <POOL_ID>
+  pool_title: <POOL_NAME>
+  data: <EVENT_DATA>
+origin: LOCAL
+time_fired: <timestamp>
+context:
+  id: <event_id>
+  parent_id: null
+  user_id: null
+```
+
+- `type`: The event type (see list below)
+- `pool_id`: The unique ID of the pool concerned
+- `pool_title`: The name of the pool
+- `data`: Event-specific data (see below)
+
+---
+
+## List of Published Events
+
+The following events are published by the integration:
+
+| Event Type           | Description                                              |
+|----------------------|---------------------------------------------------------|
+| `BOOST_START`        | A boost filtration period has started                   |
+| `BOOST_END`          | A boost filtration period has ended                     |
+| `BOOST_CANCELED`     | A boost filtration period was canceled before its end   |
+| `SLOT1_START`        | Summer slot #1 filtration started                       |
+| `SLOT1_END`          | Summer slot #1 filtration ended                         |
+| `SLOT2_START`        | Summer slot #2 filtration started                       |
+| `SLOT2_END`          | Summer slot #2 filtration ended                         |
+| `WINTER_START`       | Winter filtration started                               |
+| `WINTER_END`         | Winter filtration ended                                 |
+
+---
+
+## Example Events
+
+<Card title="Example: BOOST_START" icon="bolt">
+```yaml
+event_type: IOPOOL_EVENT
+data:
+  type: BOOST_START
+  pool_id: 123456
+  pool_title: "My Pool"
+  data:
+    start_time: "2024-06-01T10:00:00+02:00"
+    end_time: "2024-06-01T14:00:00+02:00"
+    duration_minutes: 240
+origin: LOCAL
+time_fired: "2024-06-01T10:00:01.000000+02:00"
+context:
+  id: 01JZ1234567890ABCDE
+  parent_id: null
+  user_id: null
+```
+</Card>
+
+<Card title="Example: SLOT1_START" icon="play">
+```yaml
+event_type: IOPOOL_EVENT
+data:
+  type: SLOT1_START
+  pool_id: 123456
+  pool_title: "My Pool"
+  data:
+    start_time: "2024-06-01T06:00:00+02:00"
+    end_time: "2024-06-01T08:00:00+02:00"
+    duration_minutes: 120
+origin: LOCAL
+time_fired: "2024-06-01T06:00:01.000000+02:00"
+context:
+  id: 01JZ1234567890ABCDE
+  parent_id: null
+  user_id: null
+```
+</Card>
+
+<Card title="Example: SLOT2_END" icon="stop">
+```yaml
+event_type: IOPOOL_EVENT
+data:
+  type: SLOT2_END
+  pool_id: 123456
+  pool_title: "My Pool"
+  data:
+    start_time: "2024-06-01T18:00:00+02:00"
+    end_time: "2024-06-01T20:00:00+02:00"
+    duration_minutes: 120
+    boost_in_progress: "None"
+    remaining_boost_duration_minutes: 0
+    day_filtration_objective_minutes: 360
+    day_filtration_elapsed_minutes: 360
+    day_filtration_elapsed_percent: 100
+origin: LOCAL
+time_fired: "2024-06-01T20:00:01.000000+02:00"
+context:
+  id: 01JZ1234567890ABCDE
+  parent_id: null
+  user_id: null
+```
+</Card>
+
+<Card title="Example: WINTER_END" icon="snowflake">
+```yaml
+event_type: IOPOOL_EVENT
+data:
+  type: WINTER_END
+  pool_id: 123456
+  pool_title: "My Pool"
+  data:
+    start_time: "2024-12-01T03:00:00+01:00"
+    end_time: "2024-12-01T05:00:00+01:00"
+    duration_minutes: 120
+    boost_in_progress: "None"
+    remaining_boost_duration_minutes: 0
+    day_filtration_objective_minutes: 120
+    day_filtration_elapsed_minutes: 120
+    day_filtration_elapsed_percent: 100
+origin: LOCAL
+time_fired: "2024-12-01T05:00:01.000000+01:00"
+context:
+  id: 01JZ1234567890ABCDE
+  parent_id: null
+  user_id: null
+```
+</Card>
+
+---
+
+## Event Data Details
+
+Depending on the event type, the `data` field contains:
+
+- **For BOOST events (`BOOST_START`, `BOOST_END`, `BOOST_CANCELED`):**
+  - `start_time`: ISO8601 datetime when boost started (local time)
+  - `end_time`: ISO8601 datetime when boost ended or was canceled (local time)
+  - `duration_minutes`: Duration of the boost in minutes
+
+- **For SLOT and WINTER events:**
+  - `start_time`: ISO8601 datetime when filtration started
+  - `end_time`: ISO8601 datetime when filtration ended
+  - `duration_minutes`: Duration of the slot/winter filtration in minutes
+  - `boost_in_progress`: Current boost state (`None`, `1H`, `4H`, etc.)
+  - `remaining_boost_duration_minutes`: Minutes left in boost (if any)
+  - `day_filtration_objective_minutes`: Target filtration duration for the day
+  - `day_filtration_elapsed_minutes`: Elapsed filtration time for the day
+  - `day_filtration_elapsed_percent`: Percentage of daily objective reached
+
+---
+
+## Usage in Automations
+
+You can use these events in Home Assistant automations to trigger notifications, scripts, or other actions.  
+For example, to notify when a boost ends:
+
+```yaml
+automation:
+  - alias: "Notify when pool boost ends"
+    trigger:
+      - platform: event
+        event_type: IOPOOL_EVENT
+        event_data:
+          type: BOOST_END
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          message: "The boost filtration for your pool has ended."
+```
+
+<Info>
+All event times are in your Home Assistant's local timezone.
+</Info>
