@@ -3,13 +3,12 @@
   "name": "iopool",
   "codeowners": ["@mguyard"],
   "config_flow": true,
-  "dependencies": ["cloud"],
+  "dependencies": ["cloud", "history_stats"],
   "documentation": "https://docs.page/mguyard/hass-iopool",
   "integration_type": "hub",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/mguyard/hass-iopool/issues",
   "quality_scale": "bronze",
   "requirements": [],
-  "version": "0.0.1",
-  "translations": ["en", "fr"]
+  "version": "0.0.1"
 }

@@ -125,22 +125,10 @@
         },
         "select": {
             "boost_selector": {
-                "name": "Boost Selector",
-                "state": {
-                    "None": "None",
-                    "1H": "1 Hour",
-                    "4H": "4 Hours",
-                    "8H": "8 Hours",
-                    "24H": "24 Hours"
-                }
+                "name": "Boost Selector"
             },
             "pool_mode": {
-                "name": "Pool Mode",
-                "state": {
-                    "Standard": "Standard",
-                    "Active-Winter": "Active wintering",
-                    "Passive-Winter": "Passive wintering"
-                }
+                "name": "Pool Mode"
             }
         }
     }
