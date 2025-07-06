@@ -62,19 +62,9 @@
           "icon": "sitemap"
         },
         {
-          "title": "Webhook",
-          "href": "/integration/webhook",
-          "icon": "envelope"
-        },
-        {
           "title": "Events",
           "href": "/integration/events",
           "icon": "terminal"
-        },
-        {
-          "title": "Actions",
-          "href": "/integration/actions",
-          "icon": "microchip"
         }
       ]
     },

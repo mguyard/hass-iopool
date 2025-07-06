@@ -3,5 +3,96 @@ title: FAQ
 summary: Frequently Asked Questions
 ---
 
-No frequently asked questions at the moment!
-Please check back later...
+## Configuration
+
+### How do I change my iopool API Key?
+
+<Accordion title="How to" icon="key" defaultOpen>
+To change your API Key, go to [the integration configuration](https://my.home-assistant.io/redirect/integration/?domain=iopool), click on the 3 vertical dots icon, and select `Reconfigure`. Enter your new API Key and follow the prompts.
+</Accordion>
+
+### How do I add or remove a pool?
+
+<Accordion title="How to" icon="plus">
+To add a new pool, go to [the integration configuration](https://my.home-assistant.io/redirect/integration/?domain=iopool) and click `Add Hub`.  
+To remove a pool, delete the corresponding iopool device from your Home Assistant integrations page.
+</Accordion>
+
+### How do I enable or configure filtration automation?
+
+<Accordion title="How to" icon="sliders">
+To enable or configure filtration automation, go to [the integration configuration](https://my.home-assistant.io/redirect/integration/?domain=iopool), locate your pool, and click the <b>Configure</b> button.  
+This will open the options where you can enable summer/winter filtration, set schedules, and assign the switch entity controlling your pool pump.
+</Accordion>
+
+## Features
+
+### What entities are created by the integration?
+
+<Accordion title="See the list" icon="table-list">
+See the [Entities documentation](/integration/entities) for a full list of sensors, binary sensors, and selectors created for each pool.
+</Accordion>
+
+### How do I enable entity name and option translations?
+
+<Accordion title="Entity name translations" icon="language">
+To have entity names and options translated, you must set the server language in your `configuration.yaml`:
+
+```yaml
+homeassistant:
+  language: fr
+```
+
+Changing only your user profile language is **not** sufficient for entity names and options.  
+For all other texts (UI, menus, etc.), the translation is based on your user profile language.
+</Accordion>
+
+### How does Boost mode work?
+
+<Accordion title="How to use Boost" icon="bolt">
+Boost mode allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h.  
+You can activate Boost via the `Boost Selector` entity in Home Assistant or through automations.
+</Accordion>
+
+### Can I use the integration with multiple pools?
+
+<Accordion title="Multi-pool support" icon="layer-group">
+Yes, the integration supports multiple pools. Each pool is configured as a separate device in Home Assistant.
+</Accordion>
+
+## Errors
+
+### "No pools found. Please check your iopool sensor is under this API key."
+
+<Accordion title="What does this mean?" icon="circle-question">
+This means the API Key you provided does not have any pools associated with it.  
+Check that your EcO device is registered in your iopool account and that you copied the correct API Key from the iopool app.
+</Accordion>
+
+### "Switch entity is required when filtration (summer or winter) is enabled."
+
+<Accordion title="How to solve?" icon="toggle-on">
+You must select a Home Assistant switch entity that controls your pool pump in the integration options.  
+Without this, filtration automation cannot be enabled.
+</Accordion>
+
+### "Minimum duration cannot be greater than maximum duration."
+
+<Accordion title="How to solve?" icon="arrow-down-1-9">
+Check your filtration options and ensure the minimum duration is less than or equal to the maximum duration.
+</Accordion>
+
+## Events
+
+### What events does the integration publish?
+
+<Accordion title="See event details" icon="bell">
+The integration publishes events such as boost start/end, slot start/end, and winter filtration events.  
+See the [Events documentation](/integration/events) for details and examples.
+</Accordion>
+
+---
+
+<Success>
+[Feel free to suggest](https://github.com/mguyard/hass-iopool/issues/new/choose) any questions or content you think would be useful here!
+</Success>

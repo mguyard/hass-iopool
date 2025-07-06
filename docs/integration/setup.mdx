@@ -19,7 +19,7 @@ The user installs and uses this integration at their own risk and with full know
 
 1. An iopool EcO device
 2. An active iopool account
-3. Internet connectivity for your Home Assistant
+3. Internet connectivity for your Home Assistant instance
 4. One of the following methods to connect your EcO sensor to the iopool cloud:
    - **Recommended:** An [iopool Connect WiFi Gateway](https://iopool.com/en-fr/collections/accessories/products/connect-bluetooth-wi-fi-gateway) that maintains a constant Bluetooth connection to your EcO sensor and sends data to the cloud via WiFi
    - Alternatively: Regular use of the iopool mobile app near your EcO sensor to sync data via Bluetooth (this method provides less frequent and less reliable data updates)
@@ -38,8 +38,8 @@ You'll need just a few details to configure the iopool integration:
 You can obtain your API key directly from the iopool mobile application:
 
 1. Open the iopool app on your smartphone
-2. Navigate to the `Plus` menu > `Settings` > `API Key` section
-3. Your API key should be displayed and available for copy
+2. Go to the `Plus` menu, `Settings` > `API Key` section
+3. Copy your API key
 
 <Info>
 The API key is used to securely access your pool data through the iopool API.
@@ -52,6 +52,7 @@ Start the setup process by clicking the button below:
 
 The setup process is simple:
 - Enter your `API Key`
+- Select the pool you want to integrate (if you have several pools under your account)
 
 Fill in the API key field and click `Submit`.
 A success popup will appear where you can select an area for your iopool device.
@@ -65,12 +66,29 @@ Please check your Home Assistant logs to ensure there are no errors related to t
 
 ## Features and Sensors
 
-The iopool integration will automatically create the following sensors for each of your pools:
+The iopool integration will automatically create the following entities for each of your pools:
 
-1. **Temperature** - The current temperature of your pool water
-2. **pH** - The pH level of your pool water
-3. **ORP** - The oxidation-reduction potential of your pool water
-4. **Mode** - The current mode of your iopool device
-5. **Action Required** - A binary sensor that indicates if any action is needed for your pool maintenance
+### Sensors
+
+- **Temperature** (`sensor.iopool_*_temperature`): The current temperature of your pool water
+- **pH** (`sensor.iopool_*_ph`): The pH level of your pool water
+- **ORP** (`sensor.iopool_*_orp`): The oxidation-reduction potential of your pool water
+- **Mode** (`sensor.iopool_*_iopool_mode`): The current mode of your iopool device
+- **Filtration Recommendation** (`sensor.iopool_*_filtration_recommendation`): The recommended daily filtration duration (in minutes)
+- **Elapsed Filtration Duration** (`sensor.iopool_*_elapsed_filtration_duration`): The total filtration time elapsed today (in minutes)  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+
+### Binary Sensors
+
+- **Action Required** (`binary_sensor.iopool_*_action_required`): Indicates if any maintenance action is needed for your pool
+- **Filtration** (`binary_sensor.iopool_*_filtration`): Indicates if the filtration system is currently running  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+
+### Select Entities
+
+- **Boost Selector** (`select.iopool_*_boost_selector`): Allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+- **Pool Mode** (`select.iopool_*_pool_mode`): Allows you to switch between Standard, Active-Winter, and Passive-Winter modes  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
 
 All sensors include additional attributes such as measurement validity, measurement mode, and timestamp of the last measurement.
