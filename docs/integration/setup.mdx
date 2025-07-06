@@ -1,0 +1,94 @@
+---
+title: Setup
+description: Setting up the Integration
+previous: /integration
+previousTitle: Installation
+next: /integration/entities
+nextTitle: Features
+---
+
+To configure the integration, you'll need your iopool API key to connect to the iopool Cloud service.
+The `iopool` integration communicates with the iopool API to retrieve data from your EcO device.
+
+<Warning>
+This integration is provided as-is, without any warranty of any kind. The developer of this integration cannot be held liable for any issues arising from its use.
+The user installs and uses this integration at their own risk and with full knowledge of the potential implications. The data provided by this integration does not replace professional pool maintenance.
+</Warning>
+
+## Requirements
+
+1. An iopool EcO device
+2. An active iopool account
+3. Internet connectivity for your Home Assistant instance
+4. One of the following methods to connect your EcO sensor to the iopool cloud:
+   - **Recommended:** An [iopool Connect WiFi Gateway](https://iopool.com/en-fr/collections/accessories/products/connect-bluetooth-wi-fi-gateway) that maintains a constant Bluetooth connection to your EcO sensor and sends data to the cloud via WiFi
+   - Alternatively: Regular use of the iopool mobile app near your EcO sensor to sync data via Bluetooth (this method provides less frequent and less reliable data updates)
+
+<Info>
+The iopool Connect WiFi Gateway is strongly recommended for this integration as it provides continuous, reliable data updates. Without the gateway, data will only be updated when someone manually synchronizes the EcO sensor with their smartphone near the pool, which can lead to outdated information in Home Assistant.
+</Info>
+
+## Required Information
+
+You'll need just a few details to configure the iopool integration:
+- Your iopool API key
+
+### Getting Your API Key
+
+You can obtain your API key directly from the iopool mobile application:
+
+1. Open the iopool app on your smartphone
+2. Go to the `Plus` menu, `Settings` > `API Key` section
+3. Copy your API key
+
+<Info>
+The API key is used to securely access your pool data through the iopool API.
+</Info>
+
+## Integration Setup in Home Assistant
+
+Start the setup process by clicking the button below:
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=iopool)
+
+The setup process is simple:
+- Enter your `API Key`
+- Select the pool you want to integrate (if you have several pools under your account)
+
+Fill in the API key field and click `Submit`.
+A success popup will appear where you can select an area for your iopool device.
+
+Click `Finish` to complete the setup! 🎉
+
+<Success>
+Please check your Home Assistant logs to ensure there are no errors related to the iopool Integration.
+[![Open your Home Assistant instance and view your Home Assistant logs.](https://my.home-assistant.io/badges/logs.svg)](https://my.home-assistant.io/redirect/logs/?)
+</Success>
+
+## Features and Sensors
+
+The iopool integration will automatically create the following entities for each of your pools:
+
+### Sensors
+
+- **Temperature** (`sensor.iopool_*_temperature`): The current temperature of your pool water
+- **pH** (`sensor.iopool_*_ph`): The pH level of your pool water
+- **ORP** (`sensor.iopool_*_orp`): The oxidation-reduction potential of your pool water
+- **Mode** (`sensor.iopool_*_iopool_mode`): The current mode of your iopool device
+- **Filtration Recommendation** (`sensor.iopool_*_filtration_recommendation`): The recommended daily filtration duration (in minutes)
+- **Elapsed Filtration Duration** (`sensor.iopool_*_elapsed_filtration_duration`): The total filtration time elapsed today (in minutes)  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+
+### Binary Sensors
+
+- **Action Required** (`binary_sensor.iopool_*_action_required`): Indicates if any maintenance action is needed for your pool
+- **Filtration** (`binary_sensor.iopool_*_filtration`): Indicates if the filtration system is currently running  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+
+### Select Entities
+
+- **Boost Selector** (`select.iopool_*_boost_selector`): Allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+- **Pool Mode** (`select.iopool_*_pool_mode`): Allows you to switch between Standard, Active-Winter, and Passive-Winter modes  
+  <small>_Only available if filtration automation is enabled and a switch entity is configured in the integration options._</small>
+
+All sensors include additional attributes such as measurement validity, measurement mode, and timestamp of the last measurement.
