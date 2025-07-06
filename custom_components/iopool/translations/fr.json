@@ -125,22 +125,10 @@
         },
         "select": {
             "boost_selector": {
-                "name": "Sélecteur Boost",
-                "state": {
-                    "None": "Aucun",
-                    "1H": "1 Heure",
-                    "4H": "4 Heures",
-                    "8H": "8 Heures",
-                    "24H": "24 Heures"
-                }
+                "name": "Sélecteur Boost"
             },
             "pool_mode": {
-                "name": "Mode piscine",
-                "state": {
-                    "Standard": "Standard",
-                    "Active-Winter": "Hivernage actif",
-                    "Passive-Winter": "Hivernage passif"
-                }
+                "name": "Mode piscine"
             }
         }
     }
