@@ -18,7 +18,7 @@
                 "data": {
                     "api_key": "Clé API"
                 },
-                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé d'API\n3. Copiez la clé API et collez-la ici.",
                 "title": "Configuration iopool"
             },
             "choose_pool": {
@@ -30,7 +30,7 @@
             },
             "reconfigure": {
               "title": "Configuration iopool",
-              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé d'API\n3. Copiez la clé API et collez-la ici.",
               "data": {
                 "api_key": "Clé API"
               }
@@ -125,22 +125,10 @@
         },
         "select": {
             "boost_selector": {
-                "name": "Sélecteur Boost",
-                "state": {
-                    "None": "Aucun",
-                    "1H": "1 Heure",
-                    "4H": "4 Heures",
-                    "8H": "8 Heures",
-                    "24H": "24 Heures"
-                }
+                "name": "Sélecteur Boost"
             },
             "pool_mode": {
-                "name": "Mode piscine",
-                "state": {
-                    "Standard": "Standard",
-                    "Active-Winter": "Hivernage actif",
-                    "Passive-Winter": "Hivernage passif"
-                }
+                "name": "Mode piscine"
             }
         }
     }
