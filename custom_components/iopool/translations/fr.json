@@ -18,7 +18,7 @@
                 "data": {
                     "api_key": "Clé API"
                 },
-                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+                "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé d'API\n3. Copiez la clé API et collez-la ici.",
                 "title": "Configuration iopool"
             },
             "choose_pool": {
@@ -30,7 +30,7 @@
             },
             "reconfigure": {
               "title": "Configuration iopool",
-              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé API\n3. Copiez la clé API et collez-la ici.",
+              "description": "Récupérez votre clé API dans l'application IOPool :\n1. Ouvrez l'application IOPool\n2. Allez dans Paramètres > Clé d'API\n3. Copiez la clé API et collez-la ici.",
               "data": {
                 "api_key": "Clé API"
               }
