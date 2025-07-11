@@ -64,6 +64,117 @@ Please check your Home Assistant logs to ensure there are no errors related to t
 [![Open your Home Assistant instance and view your Home Assistant logs.](https://my.home-assistant.io/badges/logs.svg)](https://my.home-assistant.io/redirect/logs/?)
 </Success>
 
+## Automatic Filtration Setup
+
+After installing the integration, you can configure automatic pool filtration management from the integration options in Home Assistant.
+
+<Info>
+Automatic filtration management allows Home Assistant to control your pool pump according to time slots and personalized recommendations, based on water temperature, season, and your preferences.
+</Info>
+
+### Where to configure?
+
+1. Go to **Settings > Devices & Services > Integrations**.
+2. Find your iopool integration and click **Configure** (or the gear icon).
+3. Fill in the fields as needed (see explanations below).
+
+---
+
+### Filtration Parameters
+
+<Info>
+**How does the automation mode selection work?**  
+- **Summer Filtration (Standard)** is active when the pool mode is set to **Standard** (via the "Pool Mode" select entity in Home Assistant).  
+- **Winter Filtration (Active-Winter)** is active when the pool mode is set to **Active-Winter**.  
+Only one mode is active at a time, depending on the selected pool mode.  
+If both summer and winter filtration are enabled, the integration will automatically use the correct schedule based on the current pool mode.
+</Info>
+
+#### Switch Entity
+
+- **Switch entity to control filtration**  
+  Select the `switch` entity that controls your pool filtration pump (e.g., a connected relay).
+
+---
+
+#### Summer Filtration (Standard)
+
+- **Enable summer automatic filtration**  
+  Enable or disable automatic filtration management in summer mode.
+- **Minimum duration (minutes)**  
+  Minimum daily filtration duration (in minutes). Leave empty or 0 for no minimum.
+- **Maximum duration (minutes)**  
+  Maximum daily filtration duration (in minutes). Leave empty or 0 for no maximum.
+
+##### Filtration Slots (for Summer mode)
+
+You can define up to two time slots to spread filtration throughout the day.
+
+- **Slot #1 Name**  
+  Free name to identify the slot (e.g., "Morning").
+- **Slot #1 Start Time**  
+  Time when the first filtration slot starts.
+- **Slot #1 Percentage**  
+  Percentage of the total filtration duration to be performed in this slot (e.g., 60%).
+
+- **Slot #2 Name**  
+  Free name for the second slot (e.g., "Evening").
+- **Slot #2 Start Time**  
+  Start time for the second slot.
+- **Slot #2 Percentage**  
+  Percentage of the total filtration duration to be performed in this slot (e.g., 40%).
+
+<Info>
+The sum of the percentages for both slots must equal 100%.  
+The second slot is optional (set to 0% to disable).
+</Info>
+
+---
+
+#### Winter Filtration (Active-Winter)
+
+- **Enable winter automatic filtration**  
+  Enable or disable automatic filtration management in active winter mode.
+- **Start time**  
+  Time when daily winter filtration starts.
+- **Duration (minutes)**  
+  Daily filtration duration in winter mode (in minutes).
+
+---
+
+### Configuration Tips
+
+- **Required**: The switch entity must be set if automatic filtration (summer or winter) is enabled.
+- **Summer slots**: Slot #1 must start before slot #2.
+- **Validation**: The interface automatically checks the consistency of times and percentages.
+- **Disabling**: To disable automatic management, uncheck the corresponding activation boxes.
+
+---
+
+### Example Configuration
+
+| Parameter                        | Value                  |
+|----------------------------------|------------------------|
+| Switch entity                    | `switch.pompe_piscine` |
+| Summer filtration enabled        | Yes                    |
+| Minimum duration                 | 240                    |
+| Maximum duration                 | 480                    |
+| Slot #1 - Name                   | Morning                |
+| Slot #1 - Start                  | 06:00                  |
+| Slot #1 - %                      | 60                     |
+| Slot #2 - Name                   | Evening                |
+| Slot #2 - Start                  | 18:00                  |
+| Slot #2 - %                      | 40                     |
+| Winter filtration enabled        | Yes                    |
+| Winter - Start                   | 03:00                  |
+| Winter - Duration                | 120                    |
+
+---
+
+<Info>
+You can adjust these parameters at any time from the integration options to adapt filtration to your needs or the season.
+</Info>
+
 ## Features and Sensors
 
 The iopool integration will automatically create the following entities for each of your pools:
