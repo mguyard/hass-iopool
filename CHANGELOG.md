@@ -1,3 +1,10 @@
+# [1.1.0-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.0.1...v1.1.0-beta.1) (2025-07-11)
+
+
+### Features
+
+* Add 2H boost option to filtration control ([7c6307a](https://github.com/mguyard/hass-iopool/commit/7c6307a3720fa341c78968fe320f24378bb90eb7))
+
 # [1.0.1](https://github.com/mguyard/hass-iopool/compare/v1.0.0...v1.0.1) (2025-07-06)
 
 
