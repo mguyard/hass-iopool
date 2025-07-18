@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID
 from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResponsePool
 
-# Remove custom hass fixture - use the one from pytest-homeassistant-custom-component
+# Override the hass fixture to fix async generator issues
+@pytest.fixture
+def hass(event_loop):
+    """Return a proper HomeAssistant instance for testing."""
+    from pytest_homeassistant_custom_component.common import async_test_home_assistant
+    return event_loop.run_until_complete(async_test_home_assistant(event_loop).__aenter__())
 
 
 @pytest.fixture

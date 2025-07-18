@@ -15,7 +15,7 @@ from custom_components.iopool.api_models import IopoolAPIResponse
 
 
 @pytest.mark.asyncio
-async def test_coordinator_init(hass: HomeAssistant, mock_api_key):
+async def test_coordinator_init(hass: HomeAssistant, mock_api_key, mock_aiohttp_session):
     """Test coordinator initialization."""
     coordinator = IopoolDataUpdateCoordinator(hass, mock_api_key)
     
