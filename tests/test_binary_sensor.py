@@ -153,7 +153,7 @@ class TestIopoolBinarySensor:
         """Test binary sensor is_on property when action is required."""
         # Mock pool data with action required
         mock_pool = Mock()
-        mock_pool.action_required = True
+        mock_pool.has_action_required = True
         
         iopool_binary_sensor.coordinator.get_pool_data.return_value = mock_pool
         
@@ -164,7 +164,7 @@ class TestIopoolBinarySensor:
         """Test binary sensor is_on property when no action is required."""
         # Mock pool data with no action required
         mock_pool = Mock()
-        mock_pool.action_required = False
+        mock_pool.has_action_required = False
         
         iopool_binary_sensor.coordinator.get_pool_data.return_value = mock_pool
         
@@ -180,8 +180,8 @@ class TestIopoolBinarySensor:
     def test_binary_sensor_no_attribute_data(self, iopool_binary_sensor):
         """Test binary sensor when specific attribute is not available."""
         mock_pool = Mock()
-        # Mock pool without action_required attribute
-        del mock_pool.action_required
+        # Mock pool has_action_required to return None (which is valid)
+        mock_pool.has_action_required = None
         
         iopool_binary_sensor.coordinator.get_pool_data.return_value = mock_pool
         

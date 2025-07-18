@@ -98,8 +98,8 @@ async def test_async_setup_entry_without_filtration(
     # Call the function
     await async_setup_entry(hass, config_entry, async_add_entities)
     
-    # Verify no entities were added
-    async_add_entities.assert_not_called()
+    # Verify entities were added (called once with empty list)
+    async_add_entities.assert_called_once_with([])
 
 
 @pytest.mark.asyncio
