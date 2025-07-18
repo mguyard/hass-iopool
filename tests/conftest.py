@@ -14,10 +14,13 @@ from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResp
 @pytest.fixture
 def hass_instance():
     """Return a mock HomeAssistant instance for testing."""
+    from homeassistant.core import CoreState
+    
     mock_hass = Mock()
     
     # Mock basic attributes
     mock_hass.data = {}
+    mock_hass.state = CoreState.running
     
     # Mock config_entries 
     mock_hass.config_entries = Mock()
@@ -27,6 +30,11 @@ def hass_instance():
     mock_hass.config_entries.async_entries = Mock(return_value=[])
     mock_hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
     mock_hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+    mock_hass.config_entries.async_reload = AsyncMock(return_value=True)
+    
+    # Mock bus for event handling
+    mock_hass.bus = Mock()
+    mock_hass.bus.async_listen_once = Mock()
     
     # Mock helpers
     mock_hass.helpers = Mock()

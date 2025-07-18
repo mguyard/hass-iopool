@@ -84,6 +84,10 @@ async def test_async_setup_entry_with_filtration_enabled(
     mock_coordinator_update,
 ):
     """Test setup with filtration enabled."""
+    # Set HomeAssistant state to running to trigger filtration setup
+    from homeassistant.core import CoreState
+    hass_instance.state = CoreState.running
+    
     # Create a mock config entry
     config_entry = Mock(spec=IopoolConfigEntry)
     config_entry.data = mock_config_entry_data
