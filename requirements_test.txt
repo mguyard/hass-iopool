@@ -1,0 +1,9 @@
+# Testing requirements for Home Assistant iopool integration
+pytest==7.4.4
+pytest-asyncio==0.23.2
+pytest-cov==4.1.0
+pytest-homeassistant-custom-component==0.13.104
+
+# Additional testing utilities
+aioresponses==0.7.6
+freezegun==1.4.0
