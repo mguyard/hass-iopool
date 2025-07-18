@@ -21,7 +21,7 @@ from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID, P
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_success(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_api_response,
 ):
@@ -29,7 +29,7 @@ async def test_get_iopool_data_success(
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
         
-        result = await get_iopool_data(hass, mock_api_key)
+        result = await get_iopool_data(hass_instance, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.SUCCESS
         assert result.result_data is not None

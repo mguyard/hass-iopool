@@ -6,9 +6,20 @@ import pytest
 from unittest.mock import Mock, patch
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
+from pytest_homeassistant_custom_component.common import (
+    MockConfigEntry,
+    async_test_home_assistant,
+)
 
 from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID
 from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResponsePool
+
+
+@pytest.fixture
+async def hass_instance():
+    """Get the Home Assistant instance for testing."""
+    async with async_test_home_assistant() as hass:
+        yield hass
 
 
 @pytest.fixture
