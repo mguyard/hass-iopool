@@ -9,22 +9,27 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID
 from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResponsePool
 
-# Use proper HomeAssistant fixture from pytest-homeassistant-custom-component
+# The hass fixture is provided by pytest-homeassistant-custom-component
 
 @pytest.fixture
 def hass_instance():
-    """Return a mock HomeAssistant instance for testing config flow."""
+    """Return a mock HomeAssistant instance for testing."""
     mock_hass = Mock()
     
-    # Mock config_entries and flow
+    # Mock basic attributes
+    mock_hass.data = {}
+    
+    # Mock config_entries 
     mock_hass.config_entries = Mock()
     mock_hass.config_entries.flow = Mock()
     mock_hass.config_entries.flow.async_init = AsyncMock()
     mock_hass.config_entries.flow.async_configure = AsyncMock()
     mock_hass.config_entries.async_entries = Mock(return_value=[])
+    mock_hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+    mock_hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
     
-    # Mock data attribute for coordinator tests
-    mock_hass.data = {}
+    # Mock helpers
+    mock_hass.helpers = Mock()
     
     return mock_hass
 

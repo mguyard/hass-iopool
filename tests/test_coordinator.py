@@ -14,8 +14,9 @@ from custom_components.iopool.const import POOLS_ENDPOINT, DEFAULT_SCAN_INTERVAL
 from custom_components.iopool.api_models import IopoolAPIResponse
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
-async def test_coordinator_init(hass_instance: HomeAssistant, mock_api_key, mock_aiohttp_session):
+async def test_coordinator_init(hass_instance: HomeAssistant, mock_api_key, mock_aiohttp_session, expected_lingering_timers):
     """Test coordinator initialization."""
     coordinator = IopoolDataUpdateCoordinator(hass_instance, mock_api_key)
     
@@ -25,6 +26,7 @@ async def test_coordinator_init(hass_instance: HomeAssistant, mock_api_key, mock
     assert coordinator.update_interval == DEFAULT_SCAN_INTERVAL
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_update_data_success(
     hass_instance: HomeAssistant,
@@ -44,6 +46,7 @@ async def test_coordinator_update_data_success(
         assert result.pools[0].id == "test_pool_123"
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_update_data_client_error(
     hass_instance: HomeAssistant,
@@ -59,6 +62,7 @@ async def test_coordinator_update_data_client_error(
             await coordinator._async_update_data()
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_update_data_timeout(
     hass_instance: HomeAssistant,
@@ -74,6 +78,7 @@ async def test_coordinator_update_data_timeout(
             await coordinator._async_update_data()
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_update_data_json_error(
     hass_instance: HomeAssistant,
@@ -89,6 +94,7 @@ async def test_coordinator_update_data_json_error(
             await coordinator._async_update_data()
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_update_data_key_error(
     hass_instance: HomeAssistant,
@@ -107,6 +113,7 @@ async def test_coordinator_update_data_key_error(
             await coordinator._async_update_data()
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_found(
     hass_instance: HomeAssistant,
@@ -124,6 +131,7 @@ async def test_coordinator_get_pool_data_found(
     assert result.id == mock_pool_id
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_not_found(
     hass_instance: HomeAssistant,
@@ -139,6 +147,7 @@ async def test_coordinator_get_pool_data_not_found(
     assert result is None
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_no_data(
     hass_instance: HomeAssistant,
@@ -154,6 +163,7 @@ async def test_coordinator_get_pool_data_no_data(
     assert result is None
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_empty_pools(
     hass_instance: HomeAssistant,
@@ -172,8 +182,9 @@ async def test_coordinator_get_pool_data_empty_pools(
     assert result is None
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio
-async def test_coordinator_headers_property(hass_instance: HomeAssistant, mock_api_key):
+async def test_coordinator_headers_property(hass_instance: HomeAssistant, mock_api_key, expected_lingering_timers):
     """Test that headers are correctly set."""
     coordinator = IopoolDataUpdateCoordinator(hass_instance, mock_api_key)
     
@@ -181,8 +192,9 @@ async def test_coordinator_headers_property(hass_instance: HomeAssistant, mock_a
     assert coordinator.headers == expected_headers
 
 
+@pytest.mark.parametrize("expected_lingering_timers", [True])
 @pytest.mark.asyncio 
-async def test_coordinator_session_property(hass_instance: HomeAssistant, mock_api_key):
+async def test_coordinator_session_property(hass_instance: HomeAssistant, mock_api_key, expected_lingering_timers):
     """Test that session is correctly initialized."""
     with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session:
         mock_client = Mock()
