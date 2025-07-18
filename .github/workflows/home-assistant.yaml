@@ -7,12 +7,12 @@ on:
     branches:
       - main
       - beta
+      - dev
   pull_request:
     branches:
       - main
       - beta
-  schedule:
-    - cron: '0 1 * * *'
+      - dev
 
 jobs:
   validate-hassfest:
