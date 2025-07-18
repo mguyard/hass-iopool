@@ -222,9 +222,9 @@ class TestIopoolSensor:
         return IopoolSensor(
             coordinator=coordinator,
             description=mock_sensor_description,
-            entry_id="test_entry",
+            config_entry_id="test_entry",
             pool_id="test_pool_123",
-            pool_title="Test Pool",
+            pool_name="Test Pool",
         )
     
     def test_sensor_initialization(self, iopool_sensor, mock_sensor_description):

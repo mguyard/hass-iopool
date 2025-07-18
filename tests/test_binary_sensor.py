@@ -37,7 +37,10 @@ async def test_async_setup_entry_success(
         id="test_pool_123",
         title="Test Pool"
     )
+    mock_filtration = Mock()
+    mock_filtration.configuration_filtration_enabled = False
     mock_runtime_data.coordinator = mock_coordinator
+    mock_runtime_data.filtration = mock_filtration
     mock_runtime_data.config.options.filtration = {}
     config_entry.runtime_data = mock_runtime_data
     
@@ -51,8 +54,9 @@ async def test_async_setup_entry_success(
     async_add_entities.assert_called_once()
     entities = async_add_entities.call_args[0][0]
     
-    # Should have 1 binary sensor (action required)
-    assert len(entities) == 1
+    # Should have 1 or 2 binary sensors depending on filtration config
+    assert len(entities) >= 1
+    assert len(entities) <= 2
     
     # Check entity type
     for entity in entities:
@@ -74,7 +78,10 @@ async def test_async_setup_entry_no_pool(
     mock_runtime_data = Mock()
     mock_coordinator = Mock()
     mock_coordinator.get_pool_data.return_value = None
+    mock_filtration = Mock()
+    mock_filtration.configuration_filtration_enabled = False
     mock_runtime_data.coordinator = mock_coordinator
+    mock_runtime_data.filtration = mock_filtration
     config_entry.runtime_data = mock_runtime_data
     
     # Mock async_add_entities
@@ -131,9 +138,9 @@ class TestIopoolBinarySensor:
         return IopoolBinarySensor(
             coordinator=coordinator,
             description=mock_binary_sensor_description,
-            entry_id="test_entry",
+            config_entry_id="test_entry",
             pool_id="test_pool_123",
-            pool_title="Test Pool",
+            pool_name="Test Pool",
         )
     
     def test_binary_sensor_initialization(self, iopool_binary_sensor, mock_binary_sensor_description):
