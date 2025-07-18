@@ -47,17 +47,24 @@ def mock_config_entry_data(mock_api_key, mock_pool_id):
 def mock_pool_data():
     """Mock pool data from API."""
     return {
-        "poolId": "test_pool_123",
-        "name": "Test Pool",
-        "hasAnECO": True,
-        "isECOConnected": True,
-        "ecoMode": "auto",
-        "mode": "normal",
-        "ph": {"value": 7.2, "isValid": True, "measuredAt": "2024-01-01T12:00:00Z"},
-        "orp": {"value": 650, "isValid": True, "measuredAt": "2024-01-01T12:00:00Z"},
-        "temperature": {"value": 22.5, "isValid": True, "measuredAt": "2024-01-01T12:00:00Z"},
-        "actionRequired": False,
-        "filtrationRecommendation": {"hours": 8, "reason": "temperature"},
+        "id": "test_pool_123",
+        "title": "Test Pool",
+        "mode": "STANDARD",
+        "hasAnActionRequired": False,
+        "latestMeasure": {
+            "temperature": 22.5,
+            "ph": 7.2,
+            "orp": 650,
+            "mode": "standard",
+            "isValid": True,
+            "ecoId": "eco_123",
+            "measuredAt": "2024-01-01T12:00:00Z"
+        },
+        "advice": {
+            "ph": {"value": 7.2, "status": "OK"},
+            "orp": {"value": 650, "status": "OK"},
+            "temperature": {"value": 22.5, "status": "OK"}
+        }
     }
 
 

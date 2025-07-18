@@ -103,7 +103,6 @@ async def get_iopool_data(hass: HomeAssistant, api_key: str) -> GetIopoolDataRes
 
     try:
         async with session.get(POOLS_ENDPOINT, headers=headers) as response:
-            response.raise_for_status()
             if response.status == 200:
                 data = await response.json()
                 result.result_code = ApiKeyValidationResult.SUCCESS

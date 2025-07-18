@@ -21,15 +21,19 @@ from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID, P
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_success(
-    hass_instance: HomeAssistant,
     mock_api_key,
     mock_api_response,
 ):
     """Test successful API data retrieval."""
     with aioresponses.aioresponses() as m:
+        # Mock the aioresponses
         m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
         
-        result = await get_iopool_data(hass_instance, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.SUCCESS
         assert result.result_data is not None
@@ -38,14 +42,17 @@ async def test_get_iopool_data_success(
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_invalid_auth(
-    hass: HomeAssistant,
     mock_api_key,
 ):
     """Test API data retrieval with invalid authentication."""
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, status=401)
         
-        result = await get_iopool_data(hass, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.INVALID_AUTH
         assert result.result_data is None
@@ -53,14 +60,17 @@ async def test_get_iopool_data_invalid_auth(
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_forbidden(
-    hass: HomeAssistant,
     mock_api_key,
 ):
     """Test API data retrieval with forbidden access."""
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, status=403)
         
-        result = await get_iopool_data(hass, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.INVALID_AUTH
         assert result.result_data is None
@@ -68,14 +78,17 @@ async def test_get_iopool_data_forbidden(
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_server_error(
-    hass: HomeAssistant,
     mock_api_key,
 ):
     """Test API data retrieval with server error."""
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, status=500)
         
-        result = await get_iopool_data(hass, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
         assert result.result_data is None
@@ -83,14 +96,17 @@ async def test_get_iopool_data_server_error(
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_client_error(
-    hass: HomeAssistant,
     mock_api_key,
 ):
     """Test API data retrieval with client error."""
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, exception=ClientError("Connection failed"))
         
-        result = await get_iopool_data(hass, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
         assert result.result_data is None
@@ -98,14 +114,17 @@ async def test_get_iopool_data_client_error(
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_unexpected_error(
-    hass: HomeAssistant,
     mock_api_key,
 ):
     """Test API data retrieval with unexpected error."""
     with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session:
         mock_session.side_effect = Exception("Unexpected error")
         
-        result = await get_iopool_data(hass, mock_api_key)
+        # Mock HomeAssistant instance
+        mock_hass = Mock()
+        mock_hass.data = {}
+        
+        result = await get_iopool_data(mock_hass, mock_api_key)
         
         assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
         assert result.result_data is None
