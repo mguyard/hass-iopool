@@ -4,12 +4,11 @@ from __future__ import annotations
 
 import pytest
 from unittest.mock import Mock, patch, AsyncMock
-from homeassistant.core import HomeAssistant
-from homeassistant.const import Platform
-from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID
 from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResponsePool
+
+# Remove custom hass fixture - use the one from pytest-homeassistant-custom-component
 
 
 @pytest.fixture
