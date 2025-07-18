@@ -168,12 +168,12 @@ async def test_get_iopool_data_unexpected_error(
 
 @pytest.mark.asyncio
 async def test_config_flow_user_step_success(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_api_response,
 ):
     """Test successful user step in config flow."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
@@ -191,7 +191,7 @@ async def test_config_flow_user_step_success(
         result_data.result_data = IopoolAPIResponse.from_dict(mock_api_response)
         mock_get_data.return_value = result_data
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
@@ -202,11 +202,11 @@ async def test_config_flow_user_step_success(
 
 @pytest.mark.asyncio
 async def test_config_flow_user_step_invalid_auth(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test user step with invalid authentication."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
@@ -220,7 +220,7 @@ async def test_config_flow_user_step_invalid_auth(
         result_data.result_data = None
         mock_get_data.return_value = result_data
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
@@ -232,11 +232,11 @@ async def test_config_flow_user_step_invalid_auth(
 
 @pytest.mark.asyncio
 async def test_config_flow_user_step_cannot_connect(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test user step with connection error."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
@@ -250,7 +250,7 @@ async def test_config_flow_user_step_cannot_connect(
         result_data.result_data = None
         mock_get_data.return_value = result_data
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
@@ -262,15 +262,15 @@ async def test_config_flow_user_step_cannot_connect(
 
 @pytest.mark.asyncio
 async def test_config_flow_user_step_no_pools(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test user step when no pools are found."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
-    empty_response = {"pools": []}
+    empty_response = []
     
     # Mock get_iopool_data to return empty pools
     with patch("custom_components.iopool.config_flow.get_iopool_data") as mock_get_data:
@@ -283,7 +283,7 @@ async def test_config_flow_user_step_no_pools(
         result_data.result_data = IopoolAPIResponse.from_dict(empty_response)
         mock_get_data.return_value = result_data
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
@@ -294,20 +294,20 @@ async def test_config_flow_user_step_no_pools(
 
 @pytest.mark.asyncio
 async def test_config_flow_choose_pool_success(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_pool_id,
     mock_api_response,
 ):
     """Test successful pool selection."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
@@ -315,7 +315,7 @@ async def test_config_flow_choose_pool_success(
         assert result2["type"] == FlowResultType.FORM
         assert result2["step_id"] == "choose_pool"
         
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await hass_instance.config_entries.flow.async_configure(
             result2["flow_id"],
             {"pool": mock_pool_id},
         )
@@ -328,24 +328,24 @@ async def test_config_flow_choose_pool_success(
 
 @pytest.mark.asyncio
 async def test_config_flow_choose_pool_no_selection(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_api_response,
 ):
     """Test pool selection with no pool selected."""
-    result = await hass.config_entries.flow.async_init(
+    result = await hass_instance.config_entries.flow.async_init(
         DOMAIN, context={"source": config_entries.SOURCE_USER}
     )
     
     with aioresponses.aioresponses() as m:
         m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
         
-        result2 = await hass.config_entries.flow.async_configure(
+        result2 = await hass_instance.config_entries.flow.async_configure(
             result["flow_id"],
             {CONF_API_KEY: mock_api_key},
         )
         
-        result3 = await hass.config_entries.flow.async_configure(
+        result3 = await hass_instance.config_entries.flow.async_configure(
             result2["flow_id"],
             {"pool": None},
         )
@@ -357,7 +357,7 @@ async def test_config_flow_choose_pool_no_selection(
 
 @pytest.mark.asyncio
 async def test_config_flow_choose_pool_no_data(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test pool selection when no pool data is available."""
@@ -374,7 +374,7 @@ async def test_config_flow_choose_pool_no_data(
 
 @pytest.mark.asyncio
 async def test_config_flow_choose_pool_existing_pools(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_pool_id,
     mock_api_response,
@@ -388,14 +388,14 @@ async def test_config_flow_choose_pool_existing_pools(
         mock_registry.devices = {"device_id": mock_device}
         mock_dev_reg.return_value = mock_registry
         
-        result = await hass.config_entries.flow.async_init(
+        result = await hass_instance.config_entries.flow.async_init(
             DOMAIN, context={"source": config_entries.SOURCE_USER}
         )
         
         with aioresponses.aioresponses() as m:
             m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
             
-            result2 = await hass.config_entries.flow.async_configure(
+            result2 = await hass_instance.config_entries.flow.async_configure(
                 result["flow_id"],
                 {CONF_API_KEY: mock_api_key},
             )

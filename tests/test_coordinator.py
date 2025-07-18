@@ -15,7 +15,7 @@ from custom_components.iopool.api_models import IopoolAPIResponse
 
 
 @pytest.mark.asyncio
-async def test_coordinator_init(hass: HomeAssistant, mock_api_key, mock_aiohttp_session):
+async def test_coordinator_init(hass_instance: HomeAssistant, mock_api_key, mock_aiohttp_session):
     """Test coordinator initialization."""
     coordinator = IopoolDataUpdateCoordinator(hass, mock_api_key)
     
@@ -27,7 +27,7 @@ async def test_coordinator_init(hass: HomeAssistant, mock_api_key, mock_aiohttp_
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_success(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_api_response,
 ):
@@ -46,7 +46,7 @@ async def test_coordinator_update_data_success(
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_client_error(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test data update with client error."""
@@ -61,7 +61,7 @@ async def test_coordinator_update_data_client_error(
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_timeout(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test data update with timeout error."""
@@ -76,7 +76,7 @@ async def test_coordinator_update_data_timeout(
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_json_error(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test data update with JSON parsing error."""
@@ -91,7 +91,7 @@ async def test_coordinator_update_data_json_error(
 
 @pytest.mark.asyncio
 async def test_coordinator_update_data_key_error(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
 ):
     """Test data update with key error in response."""
@@ -109,7 +109,7 @@ async def test_coordinator_update_data_key_error(
 
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_found(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_pool_id,
     mock_iopool_api_response,
@@ -126,7 +126,7 @@ async def test_coordinator_get_pool_data_found(
 
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_not_found(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_iopool_api_response,
 ):
@@ -141,7 +141,7 @@ async def test_coordinator_get_pool_data_not_found(
 
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_no_data(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_pool_id,
 ):
@@ -156,7 +156,7 @@ async def test_coordinator_get_pool_data_no_data(
 
 @pytest.mark.asyncio
 async def test_coordinator_get_pool_data_empty_pools(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_api_key,
     mock_pool_id,
 ):
@@ -164,7 +164,7 @@ async def test_coordinator_get_pool_data_empty_pools(
     coordinator = IopoolDataUpdateCoordinator(hass, mock_api_key)
     
     # Create empty response
-    empty_response = IopoolAPIResponse.from_dict({"pools": []})
+    empty_response = IopoolAPIResponse.from_dict([])
     coordinator.data = empty_response
     
     result = coordinator.get_pool_data(mock_pool_id)
@@ -173,7 +173,7 @@ async def test_coordinator_get_pool_data_empty_pools(
 
 
 @pytest.mark.asyncio
-async def test_coordinator_headers_property(hass: HomeAssistant, mock_api_key):
+async def test_coordinator_headers_property(hass_instance: HomeAssistant, mock_api_key):
     """Test that headers are correctly set."""
     coordinator = IopoolDataUpdateCoordinator(hass, mock_api_key)
     
@@ -182,7 +182,7 @@ async def test_coordinator_headers_property(hass: HomeAssistant, mock_api_key):
 
 
 @pytest.mark.asyncio 
-async def test_coordinator_session_property(hass: HomeAssistant, mock_api_key):
+async def test_coordinator_session_property(hass_instance: HomeAssistant, mock_api_key):
     """Test that session is correctly initialized."""
     with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session:
         mock_client = Mock()

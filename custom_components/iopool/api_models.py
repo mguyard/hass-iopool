@@ -113,11 +113,10 @@ class IopoolAPIResponse:
     pools: list[IopoolAPIResponsePool] = field(default_factory=list)
 
     @classmethod
-    def from_dict(cls, data: dict[str, Any]) -> IopoolAPIResponse:
+    def from_dict(cls, data: list[dict[str, Any]]) -> IopoolAPIResponse:
         """Create instance from API response dictionary."""
-        pools_data = data.get("pools", [])
         pools: list[IopoolAPIResponsePool] = [
-            IopoolAPIResponsePool.from_dict(pool_data) for pool_data in pools_data
+            IopoolAPIResponsePool.from_dict(pool_data) for pool_data in data
         ]
 
         return cls(pools=pools)

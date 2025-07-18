@@ -20,7 +20,7 @@ from custom_components.iopool.models import IopoolConfigEntry
 
 @pytest.mark.asyncio
 async def test_async_setup_entry(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
     mock_iopool_api_response,
     mock_aiohttp_session,
@@ -41,7 +41,7 @@ async def test_async_setup_entry(
 
     with patch("custom_components.iopool.IopoolDataUpdateCoordinator") as mock_coord_class, \
          patch("custom_components.iopool.Filtration") as mock_filtration_class, \
-         patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward:
+         patch.object(hass_instance.config_entries, "async_forward_entry_setups") as mock_forward:
         
         # Set up mock coordinator instance
         mock_coordinator = Mock()
@@ -61,8 +61,8 @@ async def test_async_setup_entry(
 
         # Assertions
         assert result is True
-        assert DOMAIN in hass.data
-        assert config_entry.entry_id in hass.data[DOMAIN]
+        assert DOMAIN in hass_instance.data
+        assert config_entry.entry_id in hass_instance.data[DOMAIN]
         
         # Check coordinator was created and refreshed
         mock_coord_class.assert_called_once()
@@ -77,7 +77,7 @@ async def test_async_setup_entry(
 
 @pytest.mark.asyncio
 async def test_async_setup_entry_with_filtration_enabled(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
     mock_iopool_api_response,
     mock_aiohttp_session,
@@ -98,7 +98,7 @@ async def test_async_setup_entry_with_filtration_enabled(
 
     with patch("custom_components.iopool.IopoolDataUpdateCoordinator") as mock_coord_class, \
          patch("custom_components.iopool.Filtration") as mock_filtration_class, \
-         patch.object(hass.config_entries, "async_forward_entry_setups") as mock_forward:
+         patch.object(hass_instance.config_entries, "async_forward_entry_setups") as mock_forward:
         
         # Set up mock coordinator instance
         mock_coordinator = Mock()
@@ -125,7 +125,7 @@ async def test_async_setup_entry_with_filtration_enabled(
 
 @pytest.mark.asyncio
 async def test_async_unload_entry(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
 ):
     """Test successful unload of config entry."""
@@ -139,10 +139,10 @@ async def test_async_unload_entry(
     mock_runtime_data.remove_time_listeners = [Mock(), Mock()]
     config_entry.runtime_data = mock_runtime_data
 
-    # Set up hass.data
-    hass.data[DOMAIN] = {config_entry.entry_id: {"test": "data"}}
+    # Set up hass_instance.data
+    hass_instance.data[DOMAIN] = {config_entry.entry_id: {"test": "data"}}
 
-    with patch.object(hass.config_entries, "async_unload_platforms") as mock_unload:
+    with patch.object(hass_instance.config_entries, "async_unload_platforms") as mock_unload:
         mock_unload.return_value = True
 
         # Call the function under test
@@ -156,13 +156,13 @@ async def test_async_unload_entry(
         for remove_listener in mock_runtime_data.remove_time_listeners:
             remove_listener.assert_called_once()
         
-        # Check that entry was removed from hass.data
-        assert config_entry.entry_id not in hass.data[DOMAIN]
+        # Check that entry was removed from hass_instance.data
+        assert config_entry.entry_id not in hass_instance.data[DOMAIN]
 
 
 @pytest.mark.asyncio
 async def test_async_unload_entry_failed(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
 ):
     """Test failed unload of config entry."""
@@ -171,7 +171,7 @@ async def test_async_unload_entry_failed(
     config_entry.entry_id = "test_entry_id"
     config_entry.runtime_data = None
 
-    with patch.object(hass.config_entries, "async_unload_platforms") as mock_unload:
+    with patch.object(hass_instance.config_entries, "async_unload_platforms") as mock_unload:
         mock_unload.return_value = False
 
         # Call the function under test
@@ -184,7 +184,7 @@ async def test_async_unload_entry_failed(
 
 @pytest.mark.asyncio
 async def test_update_listener(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
 ):
     """Test config entry update listener."""
@@ -197,7 +197,7 @@ async def test_update_listener(
     mock_runtime_data = Mock()
     config_entry.runtime_data = mock_runtime_data
 
-    with patch.object(hass.config_entries, "async_reload") as mock_reload, \
+    with patch.object(hass_instance.config_entries, "async_reload") as mock_reload, \
          patch("custom_components.iopool.IopoolConfigData.from_config_entry") as mock_from_config:
         
         mock_new_config = Mock()
@@ -214,7 +214,7 @@ async def test_update_listener(
 
 @pytest.mark.asyncio
 async def test_update_listener_no_runtime_data(
-    hass: HomeAssistant,
+    hass_instance: HomeAssistant,
     mock_config_entry_data,
 ):
     """Test config entry update listener with no runtime data."""
@@ -224,7 +224,7 @@ async def test_update_listener_no_runtime_data(
     config_entry.entry_id = "test_entry_id"
     config_entry.runtime_data = None
 
-    with patch.object(hass.config_entries, "async_reload") as mock_reload:
+    with patch.object(hass_instance.config_entries, "async_reload") as mock_reload:
         # Call the function under test
         await update_listener(hass, config_entry)
 
