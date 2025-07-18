@@ -23,93 +23,106 @@ from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID, P
 async def test_get_iopool_data_success(
     mock_api_key,
     mock_api_response,
+    mock_aiohttp_session,
 ):
     """Test successful API data retrieval."""
-    with aioresponses.aioresponses() as m:
-        # Mock the aioresponses
-        m.get(POOLS_ENDPOINT, payload=mock_api_response, status=200)
-        
-        # Mock HomeAssistant instance
-        mock_hass = Mock()
-        mock_hass.data = {}
-        
-        result = await get_iopool_data(mock_hass, mock_api_key)
-        
-        assert result.result_code == ApiKeyValidationResult.SUCCESS
-        assert result.result_data is not None
-        assert len(result.result_data.pools) == 1
+    # Configure mock response
+    mock_response = Mock()
+    mock_response.status = 200
+    mock_response.json = AsyncMock(return_value=mock_api_response)
+    mock_aiohttp_session.get.return_value.__aenter__.return_value = mock_response
+    
+    # Mock HomeAssistant instance
+    mock_hass = Mock()
+    mock_hass.data = {}
+    
+    result = await get_iopool_data(mock_hass, mock_api_key)
+    
+    assert result.result_code == ApiKeyValidationResult.SUCCESS
+    assert result.result_data is not None
+    assert len(result.result_data.pools) == 1
 
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_invalid_auth(
     mock_api_key,
+    mock_aiohttp_session,
 ):
     """Test API data retrieval with invalid authentication."""
-    with aioresponses.aioresponses() as m:
-        m.get(POOLS_ENDPOINT, status=401)
-        
-        # Mock HomeAssistant instance
-        mock_hass = Mock()
-        mock_hass.data = {}
-        
-        result = await get_iopool_data(mock_hass, mock_api_key)
-        
-        assert result.result_code == ApiKeyValidationResult.INVALID_AUTH
-        assert result.result_data is None
+    # Configure mock response  
+    mock_response = Mock()
+    mock_response.status = 401
+    mock_aiohttp_session.get.return_value.__aenter__.return_value = mock_response
+    
+    # Mock HomeAssistant instance
+    mock_hass = Mock()
+    mock_hass.data = {}
+    
+    result = await get_iopool_data(mock_hass, mock_api_key)
+    
+    assert result.result_code == ApiKeyValidationResult.INVALID_AUTH
+    assert result.result_data is None
 
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_forbidden(
     mock_api_key,
+    mock_aiohttp_session,
 ):
     """Test API data retrieval with forbidden access."""
-    with aioresponses.aioresponses() as m:
-        m.get(POOLS_ENDPOINT, status=403)
-        
-        # Mock HomeAssistant instance
-        mock_hass = Mock()
-        mock_hass.data = {}
-        
-        result = await get_iopool_data(mock_hass, mock_api_key)
-        
-        assert result.result_code == ApiKeyValidationResult.INVALID_AUTH
-        assert result.result_data is None
+    # Configure mock response
+    mock_response = Mock()
+    mock_response.status = 403
+    mock_aiohttp_session.get.return_value.__aenter__.return_value = mock_response
+    
+    # Mock HomeAssistant instance
+    mock_hass = Mock()
+    mock_hass.data = {}
+    
+    result = await get_iopool_data(mock_hass, mock_api_key)
+    
+    assert result.result_code == ApiKeyValidationResult.FORBIDDEN
+    assert result.result_data is None
 
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_server_error(
     mock_api_key,
+    mock_aiohttp_session,
 ):
     """Test API data retrieval with server error."""
-    with aioresponses.aioresponses() as m:
-        m.get(POOLS_ENDPOINT, status=500)
-        
-        # Mock HomeAssistant instance
-        mock_hass = Mock()
-        mock_hass.data = {}
-        
-        result = await get_iopool_data(mock_hass, mock_api_key)
-        
-        assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
-        assert result.result_data is None
+    # Configure mock response
+    mock_response = Mock()
+    mock_response.status = 500
+    mock_aiohttp_session.get.return_value.__aenter__.return_value = mock_response
+    
+    # Mock HomeAssistant instance
+    mock_hass = Mock()
+    mock_hass.data = {}
+    
+    result = await get_iopool_data(mock_hass, mock_api_key)
+    
+    assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+    assert result.result_data is None
 
 
 @pytest.mark.asyncio
 async def test_get_iopool_data_client_error(
     mock_api_key,
+    mock_aiohttp_session,
 ):
     """Test API data retrieval with client error."""
-    with aioresponses.aioresponses() as m:
-        m.get(POOLS_ENDPOINT, exception=ClientError("Connection failed"))
-        
-        # Mock HomeAssistant instance
-        mock_hass = Mock()
-        mock_hass.data = {}
-        
-        result = await get_iopool_data(mock_hass, mock_api_key)
-        
-        assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
-        assert result.result_data is None
+    # Configure mock to raise ClientError
+    mock_aiohttp_session.get.side_effect = ClientError("Connection failed")
+    
+    # Mock HomeAssistant instance
+    mock_hass = Mock()
+    mock_hass.data = {}
+    
+    result = await get_iopool_data(mock_hass, mock_api_key)
+    
+    assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+    assert result.result_data is None
 
 
 @pytest.mark.asyncio

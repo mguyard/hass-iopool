@@ -3,23 +3,13 @@
 from __future__ import annotations
 
 import pytest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, patch, AsyncMock
 from homeassistant.core import HomeAssistant
 from homeassistant.const import Platform
-from pytest_homeassistant_custom_component.common import (
-    MockConfigEntry,
-    async_test_home_assistant,
-)
+from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.iopool.const import DOMAIN, CONF_API_KEY, CONF_POOL_ID
 from custom_components.iopool.api_models import IopoolAPIResponse, IopoolAPIResponsePool
-
-
-@pytest.fixture
-async def hass_instance():
-    """Get the Home Assistant instance for testing."""
-    async with async_test_home_assistant() as hass:
-        yield hass
 
 
 @pytest.fixture
@@ -85,10 +75,24 @@ def mock_iopool_api_response(mock_api_response):
 @pytest.fixture
 def mock_aiohttp_session():
     """Mock aiohttp session."""
-    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session:
-        mock_client = Mock()
-        mock_session.return_value = mock_client
-        yield mock_client
+    with patch("homeassistant.helpers.aiohttp_client.async_get_clientsession") as mock_session_func:
+        # Create a mock session that properly handles async context manager
+        mock_session = Mock()
+        
+        # Mock the get method to return an async context manager
+        mock_get_context = AsyncMock()
+        mock_session.get.return_value = mock_get_context
+        
+        # This will be set up in individual tests to return the appropriate response
+        mock_get_context.__aenter__ = AsyncMock()
+        mock_get_context.__aexit__ = AsyncMock()
+        
+        mock_session.close = AsyncMock()
+        mock_session.connector = Mock()
+        mock_session.connector.close = AsyncMock()
+        
+        mock_session_func.return_value = mock_session
+        yield mock_session
 
 
 @pytest.fixture
