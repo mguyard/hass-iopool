@@ -57,7 +57,7 @@ async def test_async_setup_entry(
         mock_forward.return_value = True
 
         # Call the function under test
-        result = await async_setup_entry(hass, config_entry)
+        result = await async_setup_entry(hass_instance, config_entry)
 
         # Assertions
         assert result is True
@@ -115,7 +115,7 @@ async def test_async_setup_entry_with_filtration_enabled(
         mock_forward.return_value = True
 
         # Call the function under test
-        result = await async_setup_entry(hass, config_entry)
+        result = await async_setup_entry(hass_instance, config_entry)
 
         # Assertions
         assert result is True
@@ -146,7 +146,7 @@ async def test_async_unload_entry(
         mock_unload.return_value = True
 
         # Call the function under test
-        result = await async_unload_entry(hass, config_entry)
+        result = await async_unload_entry(hass_instance, config_entry)
 
         # Assertions
         assert result is True
@@ -175,7 +175,7 @@ async def test_async_unload_entry_failed(
         mock_unload.return_value = False
 
         # Call the function under test
-        result = await async_unload_entry(hass, config_entry)
+        result = await async_unload_entry(hass_instance, config_entry)
 
         # Assertions
         assert result is False
@@ -204,7 +204,7 @@ async def test_update_listener(
         mock_from_config.return_value = mock_new_config
 
         # Call the function under test
-        await update_listener(hass, config_entry)
+        await update_listener(hass_instance, config_entry)
 
         # Assertions
         mock_from_config.assert_called_once_with(config_entry)
@@ -226,7 +226,7 @@ async def test_update_listener_no_runtime_data(
 
     with patch.object(hass_instance.config_entries, "async_reload") as mock_reload:
         # Call the function under test
-        await update_listener(hass, config_entry)
+        await update_listener(hass_instance, config_entry)
 
         # Assertions - should not fail and should still reload
         mock_reload.assert_called_once_with(config_entry.entry_id)
