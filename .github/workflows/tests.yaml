@@ -176,11 +176,14 @@ jobs:
                 BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
                 echo "🧪 Beta version for manual trigger: $BETA_VERSION"
                 
-                SHOULD_TEST_BETA=true
+                echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
+                pip install homeassistant==$BETA_VERSION
+                echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
               else
                 echo "🔧 MANUAL trigger + stable selected → Beta job SKIPPED"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Manual trigger with stable version selected" >> $GITHUB_ENV
+                echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
               fi
             else
               echo "🚀 PUSH/PR trigger → Checking if beta is newer than stable (using semantic version comparison)"
@@ -196,28 +199,17 @@ jobs:
               if compare_versions "$BETA_VERSION" "$STABLE_VERSION"; then
                 echo "✅ Beta ($BETA_VERSION) > Stable ($STABLE_VERSION) → Beta job WILL run"
                 echo "💡 Version comparison: Beta is from a newer release line than stable"
-                SHOULD_TEST_BETA=true
+                echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
+                pip install homeassistant==$BETA_VERSION
+                echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
               else
                 echo "⏭️ Beta ($BETA_VERSION) ≤ Stable ($STABLE_VERSION) → Beta job SKIPPED"
                 echo "💡 Version comparison: Beta versions are considered older than their corresponding stable releases"
                 echo "   Examples: 2025.7.0b9 < 2025.7.0, but 2025.8.0b1 > 2025.7.0"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Beta version ($BETA_VERSION) not newer than stable ($STABLE_VERSION)" >> $GITHUB_ENV
+                echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
               fi
-            fi
-            
-            # Install beta version
-            if [[ -z "$BETA_VERSION" ]]; then
-              echo "🔄 Fetching beta version from PyPI API..."
-              BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
-            fi
-            
-            if [[ "$SKIP_TESTS" != "true" ]]; then
-              echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
-              pip install homeassistant==$BETA_VERSION
-              echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
-            else
-              echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
             fi
             
           else
@@ -226,25 +218,23 @@ jobs:
             if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
               if [[ "${{ inputs.ha_version }}" == "stable" ]]; then
                 echo "🔧 MANUAL trigger + stable selected → Stable job WILL run"
-                SHOULD_TEST_STABLE=true
+                echo "📦 Installing Home Assistant STABLE (latest)"
+                pip install homeassistant
+                STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
+                echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
               else
                 echo "🔧 MANUAL trigger + beta selected → Stable job SKIPPED"
                 echo "💡 Reason: Manual trigger with beta version selected - only beta job will run"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Manual trigger with beta version selected" >> $GITHUB_ENV
+                echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
               fi
             else
               echo "🚀 PUSH/PR/SCHEDULE trigger → Stable job ALWAYS runs"
-              SHOULD_TEST_STABLE=true
-            fi
-            
-            if [[ "$SKIP_TESTS" != "true" ]]; then
               echo "📦 Installing Home Assistant STABLE (latest)"
               pip install homeassistant
               STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
               echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
-            else
-              echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
             fi
           fi
 
