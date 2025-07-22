@@ -338,14 +338,14 @@ jobs:
   tests-summary:
     name: Tests Summary
     if: always()
-    needs: [tests]
+    needs: [pyTest]
     runs-on: ubuntu-latest
     
     steps:
       - name: Check test results
         run: |
           echo "📊 Test Results Summary:"
-          echo "Tests: ${{ needs.tests.result }}"
+          echo "Tests: ${{ needs.pyTest.result }}"
           echo ""
           
           # Extract outputs from the matrix jobs
@@ -439,7 +439,7 @@ jobs:
           fi
           
           echo ""
-          if [[ "${{ needs.tests.result }}" == "success" ]]; then
+          if [[ "${{ needs.pyTest.result }}" == "success" ]]; then
             echo "✅ All executed tests passed!"
             exit 0
           else
