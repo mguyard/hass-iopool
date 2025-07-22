@@ -19,9 +19,13 @@ on:
   push:
     branches:
       - dev
+    paths:
+      - 'custom_components/iopool/**'
   pull_request:
     branches:
       - dev
+    paths:
+      - 'custom_components/iopool/**'
   workflow_dispatch:
     inputs:
       ha_version:
