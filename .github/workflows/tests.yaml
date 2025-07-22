@@ -189,7 +189,7 @@ jobs:
               echo "🚀 PUSH/PR trigger → Checking if beta is newer than stable (using semantic version comparison)"
               
               echo "🔄 Fetching versions from PyPI API..."
-              STABLE_VERSION=$(pip index versions homeassistant | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+              STABLE_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); stables=[v for v in versions if 'b' not in v and 'a' not in v and 'rc' not in v and 'dev' not in v]; print(sorted(stables, key=lambda x: tuple(map(int, x.split('.'))), reverse=True)[0] if stables else '')")
               BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
               
               echo "🔍 Stable version: $STABLE_VERSION"
@@ -352,7 +352,7 @@ jobs:
           
           # Get actual versions from PyPI to display in summary
           echo "🔄 Fetching current versions from PyPI..."
-          CURRENT_STABLE_VERSION=$(pip index versions homeassistant | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+          CURRENT_STABLE_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); stables=[v for v in versions if 'b' not in v and 'a' not in v and 'rc' not in v and 'dev' not in v]; print(sorted(stables, key=lambda x: tuple(map(int, x.split('.'))), reverse=True)[0] if stables else '')")
           CURRENT_BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
           
           echo "🔍 Current stable version: $CURRENT_STABLE_VERSION"
