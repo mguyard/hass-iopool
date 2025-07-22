@@ -215,14 +215,14 @@ jobs:
           retention-days: 30
 
       - name: Upload coverage to Codecov
-        if: matrix.home-assistant-version == 'stable' && env.SKIP_TESTS != 'true'
+        if: matrix.home-assistant-version == 'stable'
         uses: codecov/codecov-action@v5
         with:
-          file: /tmp/hass-config/coverage.xml
-          flags: unittests
-          name: codecov-iopool-tests-${{ matrix.home-assistant-version }}
-          fail_ci_if_error: false
           token: ${{ secrets.CODECOV_TOKEN }}
+          files: /tmp/hass-config/coverage.xml
+          flags: unittests
+          name: codecov-iopool-tests-stable
+          fail_ci_if_error: false
 
       - name: Upload test results
         if: always() && env.SKIP_TESTS != 'true'
