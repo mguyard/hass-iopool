@@ -260,6 +260,7 @@ jobs:
           PYTHONPATH=/tmp/hass-config python -m pytest \
             custom_components/iopool/tests/ \
             --cov=custom_components/iopool \
+            --cov-config=custom_components/iopool/.coveragerc \
             --cov-report=xml \
             --cov-report=term-missing \
             --html=test-report.html \
