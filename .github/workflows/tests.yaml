@@ -3,17 +3,17 @@ name: Tests
 
 # WORKFLOW LOGIC EXPLANATION:
 # This workflow creates 2 jobs via matrix strategy:
-# 1. Python 3.13 + Home Assistant STABLE (always runs)
+# 1. Python 3.13 + Home Assistant STABLE (conditionally runs)
 # 2. Python 3.13 + Home Assistant BETA (conditionally runs)
 #
 # Note: Home Assistant now requires Python >= 3.13.2, so we only test on Python 3.13
 #
-# BETA job execution rules:
-# - SCHEDULE (Monday 2AM): Runs beta only if new version available (not already tested)
-# - MANUAL: Runs beta only if user selects "beta" input
-# - PUSH/PR: Runs beta only if beta version > stable version
+# Job execution rules:
+# - SCHEDULE (Monday 1AM): Runs beta only if new version available (not already tested)
+# - MANUAL: Runs ONLY the selected version (stable OR beta), skips the other with explanation
+# - PUSH/PR: Both jobs run, but beta only if beta version > stable version
 #
-# STABLE jobs: Always run regardless of trigger
+# Each job shows clear skip/run reasons for transparency
 
 on:
   push:
@@ -37,8 +37,8 @@ on:
           - stable
           - beta
   schedule:
-    # Test beta every Tuesday at 2:45 PM UTC (4:45 PM Paris time)
-    - cron: '45 14 * * 2'
+    # Test beta every Monday at 1:00 AM UTC (3:00 AM Paris time)
+    - cron: '0 1 * * 1'
 
 jobs:
   tests:
@@ -164,7 +164,24 @@ jobs:
             echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
             
           else
-            echo "📋 STABLE JOB - Always runs for all triggers"
+            echo "📋 STABLE JOB - Checking execution conditions..."
+            
+            if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              if [[ "${{ inputs.ha_version }}" == "stable" ]]; then
+                echo "🔧 MANUAL trigger + stable selected → Stable job WILL run"
+                SHOULD_TEST_STABLE=true
+              else
+                echo "🔧 MANUAL trigger + beta selected → Stable job SKIPPED"
+                echo "💡 Reason: Manual trigger with beta version selected - only beta job will run"
+                echo "SKIP_TESTS=true" >> $GITHUB_ENV
+                echo "SKIP_REASON=Manual trigger with beta version selected" >> $GITHUB_ENV
+                exit 0
+              fi
+            else
+              echo "🚀 PUSH/PR/SCHEDULE trigger → Stable job ALWAYS runs"
+              SHOULD_TEST_STABLE=true
+            fi
+            
             echo "📦 Installing Home Assistant STABLE (latest)"
             pip install homeassistant
             STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
@@ -254,6 +271,15 @@ jobs:
             if [[ "${{ github.event_name }}" == "schedule" ]]; then
               echo "📝 Beta version ${{ env.HA_VERSION }} has been saved for future comparison"
             fi
+          fi
+
+      - name: Stable test summary
+        if: matrix.home-assistant-version == 'stable'
+        run: |
+          if [[ "${{ env.SKIP_TESTS }}" == "true" ]]; then
+            echo "🔄 Stable test was SKIPPED: ${{ env.SKIP_REASON }}"
+          else
+            echo "🎉 Stable test COMPLETED successfully with Home Assistant ${{ env.HA_VERSION }}"
           fi
 
   tests-summary:
