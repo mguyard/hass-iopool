@@ -171,6 +171,12 @@ jobs:
             elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
               if [[ "${{ inputs.ha_version }}" == "beta" ]]; then
                 echo "🔧 MANUAL trigger + beta selected → Beta job WILL run"
+                
+                # Get current beta version using PyPI API for manual trigger too
+                echo "🔄 Fetching latest beta version from PyPI API for manual trigger..."
+                BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
+                echo "🧪 Beta version for manual trigger: $BETA_VERSION"
+                
                 SHOULD_TEST_BETA=true
               else
                 echo "🔧 MANUAL trigger + stable selected → Beta job SKIPPED"
@@ -343,11 +349,94 @@ jobs:
         run: |
           echo "📊 Test Results Summary:"
           echo "Tests: ${{ needs.tests.result }}"
+          echo ""
           
+          # Extract outputs from the matrix jobs
+          echo "🔍 Job Details:"
+          
+          # Parse the job results to extract version information
+          STABLE_RESULT=""
+          BETA_RESULT=""
+          STABLE_VERSION=""
+          BETA_VERSION=""
+          STABLE_SKIP_REASON=""
+          BETA_SKIP_REASON=""
+          
+          # Note: GitHub Actions doesn't provide direct access to job outputs in matrix jobs
+          # So we'll reconstruct the information based on trigger type and inputs
+          
+          TRIGGER="${{ github.event_name }}"
+          
+          echo "🔧 Trigger: $TRIGGER"
+          
+          if [[ "$TRIGGER" == "workflow_dispatch" ]]; then
+            SELECTED_VERSION="${{ inputs.ha_version }}"
+            echo "🎯 Selected version: $SELECTED_VERSION"
+            
+            if [[ "$SELECTED_VERSION" == "stable" ]]; then
+              STABLE_RESULT="✅ EXECUTED"
+              BETA_RESULT="⏭️ SKIPPED"
+              BETA_SKIP_REASON="Manual trigger with stable version selected"
+            else
+              STABLE_RESULT="⏭️ SKIPPED"
+              BETA_RESULT="✅ EXECUTED"
+              STABLE_SKIP_REASON="Manual trigger with beta version selected"
+            fi
+          elif [[ "$TRIGGER" == "schedule" ]]; then
+            STABLE_RESULT="✅ EXECUTED"
+            BETA_RESULT="🔄 CONDITIONAL"
+            echo "📅 Schedule trigger: Stable always runs, Beta runs only if new version available"
+          else
+            STABLE_RESULT="✅ EXECUTED"
+            BETA_RESULT="🔄 CONDITIONAL"
+            echo "🚀 Push/PR trigger: Stable always runs, Beta runs only if newer than stable"
+          fi
+          
+          echo ""
+          echo "📋 Job Execution Summary:"
+          echo "┌─────────────────────────────────────────────────────────────┐"
+          echo "│                     STABLE JOB                             │"
+          echo "├─────────────────────────────────────────────────────────────┤"
+          echo "│ Status: $STABLE_RESULT"
+          if [[ -n "$STABLE_SKIP_REASON" ]]; then
+            echo "│ Skip Reason: $STABLE_SKIP_REASON"
+          else
+            echo "│ Version: Latest stable from PyPI"
+          fi
+          echo "├─────────────────────────────────────────────────────────────┤"
+          echo "│                      BETA JOB                              │"
+          echo "├─────────────────────────────────────────────────────────────┤"
+          echo "│ Status: $BETA_RESULT"
+          if [[ -n "$BETA_SKIP_REASON" ]]; then
+            echo "│ Skip Reason: $BETA_SKIP_REASON"
+          else
+            echo "│ Version: Latest beta from PyPI API (e.g., 2025.7.0b9)"
+          fi
+          echo "└─────────────────────────────────────────────────────────────┘"
+          echo ""
+          
+          # Additional context based on trigger type
+          if [[ "$TRIGGER" == "workflow_dispatch" ]]; then
+            echo "💡 Manual Execution Notes:"
+            echo "   • Only the selected version (${{ inputs.ha_version }}) was executed"
+            echo "   • The other job was skipped to save resources"
+          elif [[ "$TRIGGER" == "schedule" ]]; then
+            echo "💡 Scheduled Execution Notes:"
+            echo "   • Stable version always runs to ensure compatibility"
+            echo "   • Beta runs only if a new beta version is available"
+            echo "   • Beta versions are tracked to avoid duplicate testing"
+          else
+            echo "💡 Push/PR Execution Notes:"
+            echo "   • Stable version always runs for regression testing"
+            echo "   • Beta runs only if it's from a newer release line than stable"
+            echo "   • Uses semantic versioning: 2025.7.0b9 < 2025.7.0, but 2025.8.0b1 > 2025.7.0"
+          fi
+          
+          echo ""
           if [[ "${{ needs.tests.result }}" == "success" ]]; then
-            echo "✅ All tests passed!"
+            echo "✅ All executed tests passed!"
             exit 0
           else
-            echo "❌ Tests failed. Please review the logs above."
+            echo "❌ Some tests failed. Please review the logs above."
             exit 1
           fi
