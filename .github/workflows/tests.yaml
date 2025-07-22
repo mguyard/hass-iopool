@@ -41,8 +41,8 @@ on:
     - cron: '0 1 * * 1'
 
 jobs:
-  tests:
-    name: Run Tests (${{ matrix.python-version }} - ${{ matrix.home-assistant-version }})
+  pyTest:
+    name: Run pyTests (${{ matrix.python-version }} - ${{ matrix.home-assistant-version }})
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -241,7 +241,7 @@ jobs:
       - name: Install test dependencies
         if: env.SKIP_TESTS != 'true'
         run: |
-          pip install pytest pytest-asyncio pytest-cov pytest-timeout pytest-mock
+          pip install pytest pytest-asyncio pytest-cov pytest-timeout pytest-mock pytest-html
           pip install aiohttp aiofiles
 
       - name: Create Home Assistant test environment
@@ -262,7 +262,8 @@ jobs:
             --cov=custom_components.iopool \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-report=html \
+            --html=test-report.html \
+            --self-contained-html \
             --junitxml=junit.xml \
             -o junit_family=legacy \
             --timeout=60 \
@@ -311,7 +312,7 @@ jobs:
           path: |
             /tmp/hass-config/coverage.xml
             /tmp/hass-config/junit.xml
-            /tmp/hass-config/htmlcov/
+            /tmp/hass-config/test-report.html
 
       - name: Beta test summary
         if: matrix.home-assistant-version == 'beta'
