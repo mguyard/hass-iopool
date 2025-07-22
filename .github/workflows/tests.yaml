@@ -37,8 +37,8 @@ on:
           - stable
           - beta
   schedule:
-    # Test beta every Monday at 2 AM UTC
-    - cron: '0 2 * * 1'
+    # Test beta every Tuesday at 2:45 PM UTC (4:45 PM Paris time)
+    - cron: '45 14 * * 2'
 
 jobs:
   tests:
