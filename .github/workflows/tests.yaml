@@ -197,7 +197,8 @@ jobs:
             --timeout=60 \
             --tb=short \
             -v \
-            --durations=10
+            --durations=10 \
+            --asyncio-mode=auto
 
       - name: Save tested beta version
         if: matrix.home-assistant-version == 'beta' && env.SKIP_TESTS != 'true' && github.event_name == 'schedule'
