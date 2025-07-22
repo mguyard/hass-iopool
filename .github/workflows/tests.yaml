@@ -1,5 +1,5 @@
 ---
-name: Tests
+name: PyTest
 
 # WORKFLOW LOGIC EXPLANATION:
 # This workflow creates 2 jobs via matrix strategy:
@@ -259,7 +259,7 @@ jobs:
           cd /tmp/hass-config
           PYTHONPATH=/tmp/hass-config python -m pytest \
             custom_components/iopool/tests/ \
-            --cov=custom_components.iopool \
+            --cov=custom_components/iopool \
             --cov-report=xml \
             --cov-report=term-missing \
             --html=test-report.html \
