@@ -194,6 +194,8 @@ jobs:
             --cov-report=xml \
             --cov-report=term-missing \
             --cov-report=html \
+            --junitxml=junit.xml \
+            -o junit_family=legacy \
             --timeout=60 \
             --tb=short \
             -v \
@@ -224,6 +226,13 @@ jobs:
           name: codecov-iopool-tests-stable
           fail_ci_if_error: false
 
+      - name: Upload test results to Codecov
+        if: ${{ !cancelled() && env.SKIP_TESTS != 'true' }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          flags: unittests
+
       - name: Upload test results
         if: always() && env.SKIP_TESTS != 'true'
         uses: actions/upload-artifact@v4
@@ -231,6 +240,7 @@ jobs:
           name: test-results-py${{ matrix.python-version }}-ha${{ matrix.home-assistant-version }}
           path: |
             /tmp/hass-config/coverage.xml
+            /tmp/hass-config/junit.xml
             /tmp/hass-config/htmlcov/
 
       - name: Beta test summary
