@@ -1,0 +1,265 @@
+---
+name: Tests
+
+# WORKFLOW LOGIC EXPLANATION:
+# This workflow creates 2 jobs via matrix strategy:
+# 1. Python 3.13 + Home Assistant STABLE (always runs)
+# 2. Python 3.13 + Home Assistant BETA (conditionally runs)
+#
+# Note: Home Assistant now requires Python >= 3.13.2, so we only test on Python 3.13
+#
+# BETA job execution rules:
+# - SCHEDULE (Monday 2AM): Runs beta only if new version available (not already tested)
+# - MANUAL: Runs beta only if user selects "beta" input
+# - PUSH/PR: Runs beta only if beta version > stable version
+#
+# STABLE jobs: Always run regardless of trigger
+
+on:
+  push:
+    branches:
+      - dev
+    paths:
+      - 'custom_components/iopool/**'
+  pull_request:
+    branches:
+      - dev
+    paths:
+      - 'custom_components/iopool/**'
+  workflow_dispatch:
+    inputs:
+      ha_version:
+        description: 'Home Assistant version to test'
+        required: true
+        default: 'stable'
+        type: choice
+        options:
+          - stable
+          - beta
+  schedule:
+    # Test beta every Monday at 2 AM UTC
+    - cron: '0 2 * * 1'
+
+jobs:
+  tests:
+    name: Run Tests (${{ matrix.python-version }} - ${{ matrix.home-assistant-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.13"]
+        home-assistant-version: ["stable"]
+        include:
+          # Add beta testing job (Python 3.13 only)
+          # This job will be conditionally executed based on trigger type
+          - python-version: "3.13"
+            home-assistant-version: "beta"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-py${{ matrix.python-version }}-hass-${{ matrix.home-assistant-version }}-${{ hashFiles('custom_components/iopool/manifest.json') }}
+          restore-keys: |
+            ${{ runner.os }}-py${{ matrix.python-version }}-hass-${{ matrix.home-assistant-version }}-
+            ${{ runner.os }}-py${{ matrix.python-version }}-
+
+      - name: Download last tested beta version
+        if: matrix.home-assistant-version == 'beta' && github.event_name == 'schedule'
+        uses: actions/download-artifact@v4
+        with:
+          name: last-tested-beta-version
+          path: /tmp/
+        continue-on-error: true
+
+      - name: Install Home Assistant Core
+        run: |
+          pip install --upgrade pip setuptools wheel
+          
+          echo "🚀 Job: ${{ matrix.home-assistant-version }} on Python ${{ matrix.python-version }}"
+          echo "🔧 Trigger: ${{ github.event_name }}"
+          
+          # LOGIC EXPLANATION:
+          # - STABLE job (Python 3.13): Always runs for all triggers
+          # - BETA job (Python 3.13): Runs conditionally based on trigger:
+          #   * SCHEDULE: Runs beta only if new version available (not already tested)
+          #   * MANUAL: Runs beta only if user selects "beta" 
+          #   * PUSH/PR: Runs beta only if beta version > stable version
+          
+          if [[ "${{ matrix.home-assistant-version }}" == "beta" ]]; then
+            echo "📋 BETA JOB - Checking execution conditions..."
+            
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              echo "📅 SCHEDULE trigger → Checking if new beta version available"
+              
+              # Get current beta version
+              BETA_VERSION=$(pip index versions homeassistant --pre | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+              echo "🧪 Current beta version: $BETA_VERSION"
+              
+              # Check last tested version
+              LAST_TESTED_VERSION=""
+              if [[ -f "/tmp/last-tested-beta.txt" ]]; then
+                LAST_TESTED_VERSION=$(cat /tmp/last-tested-beta.txt)
+                echo "📋 Last tested beta version: $LAST_TESTED_VERSION"
+              else
+                echo "📋 No previous beta test record found"
+              fi
+              
+              # Compare versions
+              if [[ -n "$LAST_TESTED_VERSION" && "$BETA_VERSION" == "$LAST_TESTED_VERSION" ]]; then
+                echo "⏭️ Beta version $BETA_VERSION already tested → SKIPPING"
+                echo "💡 Reason: Same beta version ($BETA_VERSION) was already tested in previous scheduled run"
+                echo "SKIP_TESTS=true" >> $GITHUB_ENV
+                echo "SKIP_REASON=Beta version $BETA_VERSION already tested" >> $GITHUB_ENV
+                exit 0
+              else
+                echo "✅ New beta version detected ($BETA_VERSION) → Beta job WILL run"
+                SHOULD_TEST_BETA=true
+              fi
+            elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+              if [[ "${{ inputs.ha_version }}" == "beta" ]]; then
+                echo "🔧 MANUAL trigger + beta selected → Beta job WILL run"
+                SHOULD_TEST_BETA=true
+              else
+                echo "🔧 MANUAL trigger + stable selected → Beta job SKIPPED"
+                echo "SKIP_TESTS=true" >> $GITHUB_ENV
+                echo "SKIP_REASON=Manual trigger with stable version selected" >> $GITHUB_ENV
+                exit 0
+              fi
+            else
+              echo "🚀 PUSH/PR trigger → Checking if beta is newer than stable"
+              
+              STABLE_VERSION=$(pip index versions homeassistant | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+              BETA_VERSION=$(pip index versions homeassistant --pre | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+              
+              echo "🔍 Stable version: $STABLE_VERSION"
+              echo "🧪 Beta version: $BETA_VERSION"
+              
+              if [[ "$BETA_VERSION" > "$STABLE_VERSION" ]]; then
+                echo "✅ Beta ($BETA_VERSION) > Stable ($STABLE_VERSION) → Beta job WILL run"
+                SHOULD_TEST_BETA=true
+              else
+                echo "⏭️ Beta ($BETA_VERSION) ≤ Stable ($STABLE_VERSION) → Beta job SKIPPED"
+                echo "SKIP_TESTS=true" >> $GITHUB_ENV
+                echo "SKIP_REASON=Beta version ($BETA_VERSION) not newer than stable ($STABLE_VERSION)" >> $GITHUB_ENV
+                exit 0
+              fi
+            fi
+            
+            # Install beta version
+            if [[ -z "$BETA_VERSION" ]]; then
+              BETA_VERSION=$(pip index versions homeassistant --pre | grep "Available versions:" | head -1 | sed 's/Available versions: //' | cut -d',' -f1 | tr -d ' ')
+            fi
+            
+            echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
+            pip install homeassistant==$BETA_VERSION
+            echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
+            
+          else
+            echo "📋 STABLE JOB - Always runs for all triggers"
+            echo "📦 Installing Home Assistant STABLE (latest)"
+            pip install homeassistant
+            STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
+            echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
+          fi
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-cov pytest-timeout pytest-mock
+          pip install aiohttp aiofiles
+
+      - name: Create Home Assistant test environment
+        run: |
+          # Create a structure similar to the dev container
+          mkdir -p /tmp/hass-config
+          cp -r ${{ github.workspace }}/custom_components /tmp/hass-config/
+
+      - name: Run tests using existing script
+        if: env.SKIP_TESTS != 'true'
+        run: |
+          echo "🧪 Running tests with Home Assistant ${{ env.HA_VERSION }} on Python ${{ matrix.python-version }}"
+          # Adapt the existing run_tests.sh script for GitHub Actions
+          cd /tmp/hass-config
+          PYTHONPATH=/tmp/hass-config python -m pytest \
+            custom_components/iopool/tests/ \
+            --cov=custom_components.iopool \
+            --cov-report=xml \
+            --cov-report=term-missing \
+            --cov-report=html \
+            --timeout=60 \
+            --tb=short \
+            -v \
+            --durations=10
+
+      - name: Save tested beta version
+        if: matrix.home-assistant-version == 'beta' && env.SKIP_TESTS != 'true' && github.event_name == 'schedule'
+        run: |
+          echo "💾 Saving tested beta version: ${{ env.HA_VERSION }}"
+          echo "${{ env.HA_VERSION }}" > /tmp/last-tested-beta.txt
+
+      - name: Upload tested beta version record
+        if: matrix.home-assistant-version == 'beta' && env.SKIP_TESTS != 'true' && github.event_name == 'schedule'
+        uses: actions/upload-artifact@v4
+        with:
+          name: last-tested-beta-version
+          path: /tmp/last-tested-beta.txt
+          retention-days: 30
+
+      - name: Upload coverage to Codecov
+        if: matrix.home-assistant-version == 'stable' && env.SKIP_TESTS != 'true'
+        uses: codecov/codecov-action@v5
+        with:
+          file: /tmp/hass-config/coverage.xml
+          flags: unittests
+          name: codecov-iopool-tests-${{ matrix.home-assistant-version }}
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
+      - name: Upload test results
+        if: always() && env.SKIP_TESTS != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results-py${{ matrix.python-version }}-ha${{ matrix.home-assistant-version }}
+          path: |
+            /tmp/hass-config/coverage.xml
+            /tmp/hass-config/htmlcov/
+
+      - name: Beta test summary
+        if: matrix.home-assistant-version == 'beta'
+        run: |
+          if [[ "${{ env.SKIP_TESTS }}" == "true" ]]; then
+            echo "🔄 Beta test was SKIPPED: ${{ env.SKIP_REASON }}"
+          else
+            echo "🎉 Beta test COMPLETED successfully with Home Assistant ${{ env.HA_VERSION }}"
+            if [[ "${{ github.event_name }}" == "schedule" ]]; then
+              echo "📝 Beta version ${{ env.HA_VERSION }} has been saved for future comparison"
+            fi
+          fi
+
+  tests-summary:
+    name: Tests Summary
+    if: always()
+    needs: [tests]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Check test results
+        run: |
+          echo "📊 Test Results Summary:"
+          echo "Tests: ${{ needs.tests.result }}"
+          
+          if [[ "${{ needs.tests.result }}" == "success" ]]; then
+            echo "✅ All tests passed!"
+            exit 0
+          else
+            echo "❌ Tests failed. Please review the logs above."
+            exit 1
+          fi
