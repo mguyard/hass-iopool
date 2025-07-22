@@ -70,7 +70,7 @@ def pytest_runtest_makereport(item, call):
 
         # Add test file and line number
         test_details.append(f"<div><strong>Test Location:</strong> {item.fspath}::{item.name}</div>")
-        
+
         # Add timestamp
         test_details.append(f"<div><strong>Failed At:</strong> {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}</div>")
 
