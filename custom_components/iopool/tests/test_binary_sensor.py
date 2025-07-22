@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from datetime import datetime, time, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.iopool.binary_sensor import (
@@ -324,3 +325,390 @@ class TestIopoolBinarySensor:
 
         # Should set up state change listener
         sensor.async_on_remove.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_with_last_state_on(
+        self,
+        mock_iopool_coordinator,
+        hass,
+    ) -> None:
+        """Test async_added_to_hass with restored state 'on'."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        # Mock last state as 'on'
+        last_state = MagicMock()
+        last_state.state = "on"
+        last_state.attributes = {"test": "value"}
+        sensor.async_get_last_state = AsyncMock(return_value=last_state)
+        sensor.async_on_remove = MagicMock()
+        sensor.hass = hass
+
+        # Mock _get_state to return None (no current state)
+        hass.states.get.return_value = None
+
+        await sensor.async_added_to_hass()
+
+        # Should restore the 'on' state
+        hass.states.async_set.assert_called_with(
+            sensor.entity_id, "on", last_state.attributes
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_with_last_state_off(
+        self,
+        mock_iopool_coordinator,
+        hass,
+    ) -> None:
+        """Test async_added_to_hass with restored state 'off'."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        # Mock last state as 'off'
+        last_state = MagicMock()
+        last_state.state = "off"
+        last_state.attributes = {"test": "value"}
+        sensor.async_get_last_state = AsyncMock(return_value=last_state)
+        sensor.async_on_remove = MagicMock()
+        sensor.hass = hass
+
+        # Mock _get_state to return None (no current state)
+        hass.states.get.return_value = None
+
+        await sensor.async_added_to_hass()
+
+        # Should restore the 'off' state
+        hass.states.async_set.assert_called_with(
+            sensor.entity_id, "off", last_state.attributes
+        )
+
+    @pytest.mark.asyncio
+    async def test_async_added_to_hass_no_switch_entity(
+        self,
+        mock_iopool_coordinator,
+        hass,
+    ) -> None:
+        """Test async_added_to_hass when switch entity is not found."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        # Mock filtration to return None for switch entity
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_switch_entity.return_value = None
+
+        sensor.async_get_last_state = AsyncMock(return_value=None)
+        sensor.async_on_remove = MagicMock()
+        sensor.hass = hass
+
+        await sensor.async_added_to_hass()
+
+        # Should still call async_on_remove but not set up state listener
+        sensor.async_on_remove.assert_called()
+
+    @pytest.mark.asyncio
+    async def test_switch_state_change_callback(
+        self,
+        mock_iopool_coordinator,
+        hass,
+    ) -> None:
+        """Test switch state change callback functionality."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        # Mock switch entity exists
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_switch_entity.return_value = "switch.test_switch"
+
+        sensor.async_get_last_state = AsyncMock(return_value=None)
+        sensor.hass = hass
+
+        # Capture the callback function
+        captured_callback = None
+
+        def mock_async_on_remove(callback):
+            nonlocal captured_callback
+            captured_callback = callback
+
+        sensor.async_on_remove = mock_async_on_remove
+
+        await sensor.async_added_to_hass()
+
+        # Simulate switch state change event with 'on' state
+        event = MagicMock()
+        new_state = MagicMock()
+        new_state.state = "on"
+        event.data = {"new_state": new_state}
+
+        # Mock current state
+        current_state = MagicMock()
+        current_state.attributes = {"existing": "attribute"}
+        hass.states.get.return_value = current_state
+
+        # Call the captured callback
+        if hasattr(captured_callback, "__wrapped__"):
+            # It's an async_track_state_change_event call, get the actual callback
+            # We need to simulate the actual callback that would be passed
+            with patch(
+                "custom_components.iopool.binary_sensor.async_track_state_change_event"
+            ) as mock_track:
+                # Re-run the setup to capture the actual callback
+                await sensor.async_added_to_hass()
+                callback_func = mock_track.call_args[0][
+                    2
+                ]  # Third argument is the callback
+
+                # Now test the callback
+                callback_func(event)
+
+                # Should update state to 'on'
+                hass.states.async_set.assert_called_with(
+                    sensor.entity_id, "on", {"existing": "attribute"}
+                )
+
+    def test_is_on_action_required_no_pool(
+        self,
+        mock_iopool_coordinator,
+    ) -> None:
+        """Test is_on for action_required sensor when no pool data."""
+        sensor_description = POOL_BINARY_SENSORS[0]  # action_required
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        # Mock coordinator to return None for pool data
+        mock_iopool_coordinator.get_pool_data.return_value = None
+
+        assert sensor.is_on is None
+
+    def test_is_on_filtration_no_switch_state(
+        self,
+        mock_iopool_coordinator,
+        mock_api_response,
+        hass,
+    ) -> None:
+        """Test is_on for filtration sensor when switch state is None."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        sensor.hass = hass
+        mock_iopool_coordinator.get_pool_data.return_value = mock_api_response.pools[0]
+
+        # Mock switch entity exists but state is None
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_switch_entity.return_value = "switch.test_switch"
+        hass.states.get.return_value = None
+
+        assert sensor.is_on is False
+
+    def test_extra_state_attributes_filtration_winter_mode(
+        self,
+        mock_iopool_coordinator,
+        mock_api_response,
+        hass,
+    ) -> None:
+        """Test extra state attributes for filtration sensor in winter mode."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        sensor.hass = hass
+        state_mock = MagicMock()
+        state_mock.attributes = {}
+        hass.states.get.return_value = state_mock
+
+        # Mock winter mode
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_filtration_pool_mode.return_value = "Active-Winter"
+        mock_filtration.configuration_filtration_enabled_winter = True
+
+        # Mock winter filtration data
+        winter_start_time = time(10, 0)  # 10:00 AM
+        winter_duration = timedelta(hours=2)  # 2 hours
+        mock_filtration.get_winter_filtration_start_end.return_value = (
+            winter_start_time,
+            winter_duration,
+        )
+
+        mock_iopool_coordinator.get_pool_data.return_value = mock_api_response.pools[0]
+        attributes = sensor.extra_state_attributes
+
+        assert "filtration_mode" in attributes
+        assert attributes["filtration_mode"] == "Active-Winter"
+        assert "filtration_duration_minutes" in attributes
+        assert attributes["filtration_duration_minutes"] == 120.0  # 2 hours
+        assert "winter_filtration_start" in attributes
+        assert "winter_filtration_end" in attributes
+
+    def test_extra_state_attributes_filtration_passive_winter_mode(
+        self,
+        mock_iopool_coordinator,
+        mock_api_response,
+        hass,
+    ) -> None:
+        """Test extra state attributes for filtration sensor in passive winter mode."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        sensor.hass = hass
+
+        # Mock existing state with attributes that should be cleaned
+        state_mock = MagicMock()
+        state_mock.attributes = {
+            "filtration_duration_minutes": 120,
+            "winter_filtration_start": "2024-01-01T10:00:00",
+            "winter_filtration_end": "2024-01-01T12:00:00",
+            "slot1_start_time": "2024-01-01T09:00:00",
+            "slot1_end_time": "2024-01-01T11:00:00",
+            "slot2_start_time": "2024-01-01T15:00:00",
+            "slot2_end_time": "2024-01-01T17:00:00",
+            "keep_this": "should_remain",
+        }
+        hass.states.get.return_value = state_mock
+
+        # Mock passive winter mode
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_filtration_pool_mode.return_value = "Passive-Winter"
+
+        mock_iopool_coordinator.get_pool_data.return_value = mock_api_response.pools[0]
+        attributes = sensor.extra_state_attributes
+
+        assert "filtration_mode" in attributes
+        assert attributes["filtration_mode"] == "Passive-Winter"
+
+        # These attributes should be cleaned up
+        assert "filtration_duration_minutes" not in attributes
+        assert "winter_filtration_start" not in attributes
+        assert "winter_filtration_end" not in attributes
+        assert "slot1_start_time" not in attributes
+        assert "slot1_end_time" not in attributes
+        assert "slot2_start_time" not in attributes
+        assert "slot2_end_time" not in attributes
+
+        # This attribute should remain
+        assert "keep_this" in attributes
+        assert attributes["keep_this"] == "should_remain"
+
+    def test_extra_state_attributes_filtration_summer_with_slot2(
+        self,
+        mock_iopool_coordinator,
+        mock_api_response,
+        hass,
+    ) -> None:
+        """Test extra state attributes for filtration sensor in summer mode with slot2."""
+        sensor_description = POOL_BINARY_SENSORS_CONDITIONAL_FILTRATION[0]  # filtration
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        sensor.hass = hass
+        state_mock = MagicMock()
+        state_mock.attributes = {
+            "slot1_end_time": "existing_end_time",
+            "slot2_end_time": "existing_slot2_end",
+            "next_stop_time": "existing_stop_time",
+            "active_slot": "existing_slot",
+        }
+        hass.states.get.return_value = state_mock
+
+        # Mock summer mode with slot2 enabled
+        mock_filtration = mock_iopool_coordinator.config_entry.runtime_data.filtration
+        mock_filtration.get_filtration_pool_mode.return_value = "Standard"
+        mock_filtration.configuration_filtration_enabled_summer = True
+
+        # Mock slot times
+        slot1_start = datetime(2024, 1, 1, 9, 0)
+        slot2_start = datetime(2024, 1, 1, 15, 0)
+        mock_filtration.get_summer_filtration_slot_start.side_effect = [
+            slot1_start,  # First call for slot 1
+            slot2_start,  # Second call for slot 2
+        ]
+
+        # Mock config with slot2 enabled (>0 duration)
+        mock_config = mock_iopool_coordinator.config_entry.runtime_data.config
+        mock_config.options.filtration.get.return_value = {
+            "slot2": {"duration_percent": 25}  # >0 means slot2 is enabled
+        }
+
+        mock_iopool_coordinator.get_pool_data.return_value = mock_api_response.pools[0]
+        attributes = sensor.extra_state_attributes
+
+        assert "filtration_mode" in attributes
+        assert attributes["filtration_mode"] == "Standard"
+        assert "slot1_start_time" in attributes
+        assert "slot2_start_time" in attributes
+
+        # Preserved attributes should remain
+        assert "slot1_end_time" in attributes
+        assert attributes["slot1_end_time"] == "existing_end_time"
+        assert "slot2_end_time" in attributes
+        assert attributes["slot2_end_time"] == "existing_slot2_end"
+        assert "next_stop_time" in attributes
+        assert attributes["next_stop_time"] == "existing_stop_time"
+        assert "active_slot" in attributes
+        assert attributes["active_slot"] == "existing_slot"
+
+    def test_icon_property(
+        self,
+        mock_iopool_coordinator,
+    ) -> None:
+        """Test icon property."""
+        sensor_description = POOL_BINARY_SENSORS[0]  # action_required
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        assert sensor.icon == sensor_description.icon
+        assert sensor.icon == "mdi:gesture-tap-button"

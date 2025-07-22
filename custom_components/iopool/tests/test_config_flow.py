@@ -5,7 +5,13 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, patch
 
 from aiohttp.client_exceptions import ClientError
-from custom_components.iopool.config_flow import ApiKeyValidationResult, get_iopool_data
+from custom_components.iopool.api_models import IopoolAPIResponse
+from custom_components.iopool.config_flow import (
+    ApiKeyValidationResult,
+    IopoolConfigFlow,
+    IopoolOptionsFlow,
+    get_iopool_data,
+)
 from custom_components.iopool.const import CONF_POOL_ID, DOMAIN
 import pytest
 
@@ -333,3 +339,264 @@ class TestConfigFlow:
         assert result["type"] == FlowResultType.FORM
         assert result["step_id"] == "choose_pool"
         assert result["errors"] == {"base": "no_pool_selected"}
+
+
+class TestIopoolOptionsFlow:
+    """Test IopoolOptionsFlow class."""
+
+    @pytest.mark.asyncio
+    async def test_choose_pool_no_pools_available(self, hass: HomeAssistant) -> None:
+        """Test choose_pool step when no pools are available."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow._iopool_data = None  # noqa: SLF001
+
+        result = await flow.async_step_choose_pool()
+        assert result["type"] == FlowResultType.ABORT
+        assert result["reason"] == "no_pools"
+
+    @pytest.mark.asyncio
+    async def test_choose_pool_no_new_pools(
+        self, hass: HomeAssistant, mock_api_response
+    ) -> None:
+        """Test choose_pool step when no new pools are available."""
+        # Skip device registry test for now since it requires proper Home Assistant setup
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow._iopool_data = mock_api_response  # noqa: SLF001
+
+        # Mock device registry to return existing devices
+        with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:
+            mock_registry.return_value.devices.values.return_value = [
+                type(
+                    "MockDevice",
+                    (),
+                    {
+                        "identifiers": {(DOMAIN, TEST_POOL_ID)},
+                    },
+                )()
+            ]
+
+            result = await flow.async_step_choose_pool()
+            assert result["type"] == FlowResultType.ABORT
+            assert result["reason"] == "no_new_pools"
+
+    @pytest.mark.asyncio
+    async def test_user_step_no_pools_found(self, hass: HomeAssistant) -> None:
+        """Test user step when API returns no pools."""
+        with patch(
+            "custom_components.iopool.config_flow.get_iopool_data"
+        ) as mock_get_data:
+            # Mock API response with no pools
+            mock_get_data.return_value.result_code = ApiKeyValidationResult.SUCCESS
+            mock_get_data.return_value.result_data = IopoolAPIResponse(pools=[])
+
+            flow = IopoolConfigFlow()
+            flow.hass = hass
+
+            result = await flow.async_step_user({CONF_API_KEY: TEST_API_KEY})
+            assert result["type"] == FlowResultType.ABORT
+            assert result["reason"] == "no_pools_found"
+
+    @pytest.mark.asyncio
+    async def test_get_iopool_data_client_error(self, hass: HomeAssistant) -> None:
+        """Test get_iopool_data with ClientError."""
+        with patch(
+            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+        ) as mock_session:
+            mock_session.return_value.get.side_effect = ClientError("Network error")
+
+            result = await get_iopool_data(hass, TEST_API_KEY)
+            assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+            assert result.result_data is None
+
+    @pytest.mark.asyncio
+    async def test_get_iopool_data_server_error(self, hass: HomeAssistant) -> None:
+        """Test get_iopool_data with server error (5xx)."""
+        with patch(
+            "custom_components.iopool.config_flow.async_get_clientsession"
+        ) as mock_session:
+            mock_response = AsyncMock()
+            mock_response.status = 500
+            mock_response.raise_for_status.side_effect = Exception("Server error")
+            mock_session.return_value.get.return_value.__aenter__.return_value = (
+                mock_response
+            )
+
+            result = await get_iopool_data(hass, TEST_API_KEY)
+            assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+            assert result.result_data is None
+
+    @pytest.mark.asyncio
+    async def test_get_iopool_data_other_http_error(self, hass: HomeAssistant) -> None:
+        """Test get_iopool_data with other HTTP error (e.g., 404)."""
+        with patch(
+            "custom_components.iopool.config_flow.async_get_clientsession"
+        ) as mock_session:
+            mock_response = AsyncMock()
+            mock_response.status = 404
+            mock_response.raise_for_status.return_value = None
+            mock_session.return_value.get.return_value.__aenter__.return_value = (
+                mock_response
+            )
+
+            result = await get_iopool_data(hass, TEST_API_KEY)
+            assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+            assert result.result_data is None
+
+    @pytest.mark.asyncio
+    async def test_get_iopool_data_unexpected_error(self, hass: HomeAssistant) -> None:
+        """Test get_iopool_data with unexpected error."""
+        with patch(
+            "custom_components.iopool.config_flow.async_get_clientsession"
+        ) as mock_session:
+            mock_session.return_value.get.side_effect = RuntimeError("Unexpected error")
+
+            result = await get_iopool_data(hass, TEST_API_KEY)
+            assert result.result_code == ApiKeyValidationResult.CANNOT_CONNECT
+            assert result.result_data is None
+
+    @pytest.mark.asyncio
+    async def test_choose_pool_no_pool_selected(
+        self, hass: HomeAssistant, mock_api_response
+    ) -> None:
+        """Test choose_pool step when no pool is selected."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow._iopool_data = mock_api_response  # noqa: SLF001
+
+        # Mock device registry to return no existing devices
+        with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:
+            mock_registry.return_value.devices.values.return_value = []
+
+            # Test with empty user input
+            result = await flow.async_step_choose_pool({})
+            assert result["type"] == FlowResultType.FORM
+            assert result["errors"]["base"] == "no_pool_selected"
+
+    @pytest.mark.asyncio
+    async def test_choose_pool_form_display(
+        self, hass: HomeAssistant, mock_api_response
+    ) -> None:
+        """Test choose_pool step displays form correctly."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow._iopool_data = mock_api_response  # noqa: SLF001
+
+        # Mock device registry to return no existing devices
+        with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:
+            mock_registry.return_value.devices.values.return_value = []
+
+            result = await flow.async_step_choose_pool()
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "choose_pool"
+            assert result["last_step"] is True
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_step_no_changes(self, hass: HomeAssistant) -> None:
+        """Test reconfigure step when API key hasn't changed."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"entry_id": "test_entry"}
+
+        # Mock config entry
+        mock_entry = AsyncMock()
+        mock_entry.data = {CONF_API_KEY: TEST_API_KEY}
+
+        with patch.object(
+            hass.config_entries, "async_get_entry", return_value=mock_entry
+        ):
+            result = await flow.async_step_reconfigure({CONF_API_KEY: TEST_API_KEY})
+            assert result["type"] == FlowResultType.ABORT
+            assert result["reason"] == "no_changes"
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_step_success(self, hass: HomeAssistant) -> None:
+        """Test successful reconfigure step."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"entry_id": "test_entry"}
+
+        # Mock config entry
+        mock_entry = AsyncMock()
+        mock_entry.data = {CONF_API_KEY: "old_api_key"}
+        mock_entry.unique_id = "test_unique_id"
+
+        with (
+            patch.object(
+                hass.config_entries, "async_get_entry", return_value=mock_entry
+            ),
+            patch(
+                "custom_components.iopool.config_flow.get_iopool_data"
+            ) as mock_get_data,
+        ):
+            # Mock successful API validation
+            mock_get_data.return_value.result_code = ApiKeyValidationResult.SUCCESS
+
+            result = await flow.async_step_reconfigure({CONF_API_KEY: "new_api_key"})
+            assert result["type"] == FlowResultType.ABORT
+            assert result["reason"] == "reconfigure_successful"
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_step_api_error(self, hass: HomeAssistant) -> None:
+        """Test reconfigure step with API validation error."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"entry_id": "test_entry"}
+
+        # Mock config entry
+        mock_entry = AsyncMock()
+        mock_entry.data = {CONF_API_KEY: "old_api_key"}
+
+        # Create a proper mock result that matches the expected structure
+        class MockResult:
+            def __init__(self):
+                self.result_code = ApiKeyValidationResult.INVALID_AUTH
+
+            @property
+            def value(self):
+                return self.result_code.value
+
+        mock_result = MockResult()
+
+        with (
+            patch.object(
+                hass.config_entries, "async_get_entry", return_value=mock_entry
+            ),
+            patch(
+                "custom_components.iopool.config_flow.get_iopool_data",
+                return_value=mock_result,
+            ),
+        ):
+            result = await flow.async_step_reconfigure(
+                {CONF_API_KEY: "invalid_api_key"}
+            )
+            assert result["type"] == FlowResultType.FORM
+            assert result["errors"]["base"] == ApiKeyValidationResult.INVALID_AUTH.value
+
+    @pytest.mark.asyncio
+    async def test_reconfigure_step_form_display(self, hass: HomeAssistant) -> None:
+        """Test reconfigure step displays form correctly."""
+        flow = IopoolConfigFlow()
+        flow.hass = hass
+        flow.context = {"entry_id": "test_entry"}
+
+        # Mock config entry
+        mock_entry = AsyncMock()
+        mock_entry.data = {CONF_API_KEY: TEST_API_KEY}
+
+        with patch.object(
+            hass.config_entries, "async_get_entry", return_value=mock_entry
+        ):
+            result = await flow.async_step_reconfigure()
+            assert result["type"] == FlowResultType.FORM
+            assert result["step_id"] == "reconfigure"
+
+    @staticmethod
+    def test_async_get_options_flow() -> None:
+        """Test that async_get_options_flow returns correct flow type."""
+        # Mock config entry
+        mock_entry = AsyncMock()
+
+        flow = IopoolConfigFlow.async_get_options_flow(mock_entry)
+        assert isinstance(flow, IopoolOptionsFlow)

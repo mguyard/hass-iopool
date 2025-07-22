@@ -1,0 +1,12 @@
+[run]
+source = custom_components/iopool
+omit = 
+    */tests/*
+    *test*.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise AssertionError
+    raise NotImplementedError
