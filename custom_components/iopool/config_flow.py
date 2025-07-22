@@ -279,7 +279,7 @@ class IopoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
             # Set appropriate error
-            errors["base"] = result.value
+            errors["base"] = result.result_code.value
 
         # Build form with existing API key as default
         schema = vol.Schema(
