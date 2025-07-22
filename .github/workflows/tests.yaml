@@ -163,7 +163,6 @@ jobs:
                 echo "💡 Reason: Same beta version ($BETA_VERSION) was already tested in previous scheduled run"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Beta version $BETA_VERSION already tested" >> $GITHUB_ENV
-                exit 0
               else
                 echo "✅ New beta version detected ($BETA_VERSION) → Beta job WILL run"
                 SHOULD_TEST_BETA=true
@@ -182,7 +181,6 @@ jobs:
                 echo "🔧 MANUAL trigger + stable selected → Beta job SKIPPED"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Manual trigger with stable version selected" >> $GITHUB_ENV
-                exit 0
               fi
             else
               echo "🚀 PUSH/PR trigger → Checking if beta is newer than stable (using semantic version comparison)"
@@ -205,7 +203,6 @@ jobs:
                 echo "   Examples: 2025.7.0b9 < 2025.7.0, but 2025.8.0b1 > 2025.7.0"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Beta version ($BETA_VERSION) not newer than stable ($STABLE_VERSION)" >> $GITHUB_ENV
-                exit 0
               fi
             fi
             
@@ -215,9 +212,13 @@ jobs:
               BETA_VERSION=$(curl -s "https://pypi.org/pypi/homeassistant/json" | python3 -c "import json,sys; data=json.load(sys.stdin); versions=list(data['releases'].keys()); betas=[v for v in versions if 'b' in v]; print(sorted(betas, key=lambda x: tuple(map(int, x.replace('b', '.').replace('.', ' ').split())), reverse=True)[0] if betas else '')")
             fi
             
-            echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
-            pip install homeassistant==$BETA_VERSION
-            echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
+            if [[ "$SKIP_TESTS" != "true" ]]; then
+              echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
+              pip install homeassistant==$BETA_VERSION
+              echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
+            else
+              echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
+            fi
             
           else
             echo "📋 STABLE JOB - Checking execution conditions..."
@@ -231,25 +232,30 @@ jobs:
                 echo "💡 Reason: Manual trigger with beta version selected - only beta job will run"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Manual trigger with beta version selected" >> $GITHUB_ENV
-                exit 0
               fi
             else
               echo "🚀 PUSH/PR/SCHEDULE trigger → Stable job ALWAYS runs"
               SHOULD_TEST_STABLE=true
             fi
             
-            echo "📦 Installing Home Assistant STABLE (latest)"
-            pip install homeassistant
-            STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
-            echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
+            if [[ "$SKIP_TESTS" != "true" ]]; then
+              echo "📦 Installing Home Assistant STABLE (latest)"
+              pip install homeassistant
+              STABLE_VERSION=$(pip show homeassistant | grep Version | cut -d' ' -f2)
+              echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
+            else
+              echo "⏭️ Skipping Home Assistant installation (job will be skipped)"
+            fi
           fi
 
       - name: Install test dependencies
+        if: env.SKIP_TESTS != 'true'
         run: |
           pip install pytest pytest-asyncio pytest-cov pytest-timeout pytest-mock
           pip install aiohttp aiofiles
 
       - name: Create Home Assistant test environment
+        if: env.SKIP_TESTS != 'true'
         run: |
           # Create a structure similar to the dev container
           mkdir -p /tmp/hass-config
@@ -290,7 +296,7 @@ jobs:
           retention-days: 30
 
       - name: Upload coverage to Codecov
-        if: matrix.home-assistant-version == 'stable'
+        if: matrix.home-assistant-version == 'stable' && env.SKIP_TESTS != 'true'
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
