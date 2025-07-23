@@ -279,7 +279,7 @@ cards:
               - justify-content: end
               - align-self: start
       - type: custom:button-card
-        entity: switch.pool_pump
+        entity: {POOL_PUMPNAME}
         name: Pompe Piscine
         icon: mdi:water-boiler
         tap_action:
@@ -332,7 +332,7 @@ cards:
               - color: var(--black1)
         custom_fields:
           icon: |
-            [[[
+            [[[ 
               var state = entity.state;
               if (state == "on")
                 return '<ha-icon icon="mdi:toggle-switch" style="color: var(--contrast1); width: 50px; height: 50px">';
@@ -340,7 +340,7 @@ cards:
                 return '<ha-icon icon="mdi:toggle-switch-off" style="color: var(--contrast1); width: 50px; height: 50px">';
             ]]]
           state: |
-            [[[
+            [[[ 
               var state = entity.state;
               if(state == "on")
                 return `On`;
