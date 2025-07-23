@@ -332,9 +332,21 @@ cards:
               - color: var(--black1)
         custom_fields:
           icon: |
-            [[[\n              var state = entity.state;\n              if (state == "on")\n                return '<ha-icon icon="mdi:toggle-switch" style="color: var(--contrast1); width: 50px; height: 50px">'\n              else\n                return '<ha-icon icon="mdi:toggle-switch-off" style="color: var(--contrast1); width: 50px; height: 50px">'\n            ]]]
+            [[[
+              var state = entity.state;
+              if (state == "on")
+                return '<ha-icon icon="mdi:toggle-switch" style="color: var(--contrast1); width: 50px; height: 50px">';
+              else
+                return '<ha-icon icon="mdi:toggle-switch-off" style="color: var(--contrast1); width: 50px; height: 50px">';
+            ]]]
           state: |
-            [[[\n              var state = entity.state;\n              if(state == "on")\n                return `On`\n              else\n                return 'Off'\n            ]]]
+            [[[
+              var state = entity.state;
+              if(state == "on")
+                return `On`;
+              else
+                return 'Off';
+            ]]]
     columns: 2
   - type: custom:button-card
     entity: sensor.iopool_{POOL_NAME}_elapsed_filtration_duration
@@ -389,16 +401,28 @@ cards:
           - height: 12px
     custom_fields:
       recommanded: |
-        [[[\n          var iopool_recommanded = states['sensor.iopool_{POOL_NAME}_filtration_recommendation'].state;\n          return "Recommandation iopool: " + new Date(iopool_recommanded * 60 * 1000).toISOString().substr(11, 8);\n        ]]]
+        [[[
+          var iopool_recommanded = states['sensor.iopool_{POOL_NAME}_filtration_recommendation'].state;
+          return "Recommandation iopool: " + new Date(iopool_recommanded * 60 * 1000).toISOString().substr(11, 8);
+        ]]]
       bar: |
-        [[[\n          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;\n          var elapsed = Math.round(entity.state * 60, 2);\n          var elapsed_percent = Math.round(Math.min(100,((elapsed/duration)*100)),2);\n          return `<div> <div style=\"background: var(--blue); height: 12px; width: ${elapsed_percent}%\"></div> </div>`\n        ]]]
-      stat1: "00:00:00"
+        [[[
+          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
+          var elapsed = Math.round(entity.state * 60, 2);
+          var elapsed_percent = Math.round(Math.min(100,((elapsed/duration)*100)),2);
+          return `<div> <div style="background: var(--blue); height: 12px; width: ${elapsed_percent}%"></div> </div>`;
+        ]]]
       stat2: |
-        [[[\n          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;\n          var elapsed = Math.round(entity.state * 60, 2);\n          var elapsed_percent = Math.round(((elapsed/duration)*100),2);\n          return "Effectuée: " + new Date(elapsed * 60 * 1000).toISOString().substr(11,8) + " / " + elapsed_percent + "%";\n        ]]]
+        [[[
+          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
+          var elapsed = Math.round(entity.state * 60, 2);
+          var elapsed_percent = Math.round(((elapsed/duration)*100),2);
+          return "Effectuée: " + new Date(elapsed * 60 * 1000).toISOString().substr(11,8) + " / " + elapsed_percent + "%";
+        ]]]
       stat3: >
-        [[[return new
-        Date(states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes
-        * 60 * 1000).toISOString().substr(11, 8); ]]]
+        [[[
+          return new Date(states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes * 60 * 1000).toISOString().substr(11, 8);
+        ]]]
   - type: conditional
     conditions:
       - condition: state
@@ -419,7 +443,11 @@ cards:
           - padding: 12px 8px
           - box-shadow: none
           - background: |
-              [[[\n                return entity.state !== 'None'\n                  ? 'var(--green)'\n                  : 'var(--card-background-color)'\n              ]]]
+              [[[
+                return entity.state !== 'None'
+                  ? 'var(--green)'
+                  : 'var(--card-background-color)'
+              ]]]
           - border-radius: 12px
         grid:
           - grid-template-areas: "\"i n chips\" \"progress progress progress\""
@@ -434,7 +462,11 @@ cards:
           - justify-self: start
           - align-self: center
           - color: |
-              [[[\n                return entity.state !== 'None'\n                  ? 'var(--black1)'\n                  : 'var(--contrast20)'\n              ]]]
+              [[[
+                return entity.state !== 'None'
+                  ? 'var(--black1)'
+                  : 'var(--contrast20)'
+              ]]]
         name:
           - grid-area: "n"
           - justify-self: start
@@ -460,7 +492,10 @@ cards:
             - align-self: end
             - justify-self: stretch
             - display: |
-                [[[\n                  var state = states['select.iopool_{POOL_NAME}_boost_selector'].state\n                  console.log("Debug: " + state);\n                  return state != "None" ? "block" : "none" \n                ]]]
+                [[[
+                  var state = states['select.iopool_{POOL_NAME}_boost_selector'].state
+                  return state != "None" ? "block" : "none"
+                ]]]
       custom_fields:
         chips:
           card:
