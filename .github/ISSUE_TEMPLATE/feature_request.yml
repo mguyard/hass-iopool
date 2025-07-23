@@ -62,3 +62,6 @@ body:
           required: true
         - label: This issue is not a duplicate feature request of [previous feature requests](https://github.com/mguyard/hass-iopool/issues?q=label%3Afeature).
           required: true
+
+# copilot-note:
+# If you are GitHub Copilot Coding Agent, please ensure you follow all project-specific instructions in .github/copilot-instructions.md.
