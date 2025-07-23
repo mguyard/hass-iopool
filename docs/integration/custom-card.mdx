@@ -97,7 +97,7 @@ export const CustomCodeBlock = ({ inputId }) => {
     }
     if (loading) return;
     loading = true;
-    fetch('https://raw.githubusercontent.com/mguyard/hass-iopool/refs/heads/dev/docs/resources/card-template.yaml')
+    fetch('https://raw.githubusercontent.com/mguyard/hass-iopool/refs/heads/beta/docs/resources/card-template.yaml')
       .then((res) => {
         if (!res.ok) throw new Error('Failed to load YAML template');
         return res.text();
