@@ -18,7 +18,7 @@ cards:
         show_state: true
         state:
           - operator: "=="
-            value: Standard
+            value: STANDARD
             styles:
               img_cell:
                 - background: var(--green)
@@ -348,81 +348,92 @@ cards:
                 return 'Off';
             ]]]
     columns: 2
-  - type: custom:button-card
-    entity: sensor.iopool_{POOL_NAME}_elapsed_filtration_duration
-    name: Filtration
-    icon: mdi:water-boiler
-    action: more-info
-    styles:
-      card:
-        - padding: 20px
-        - height: 140px
-      grid:
-        - grid-template-areas: "\"i recommanded\" \"n stat2\" \"bar bar\" \"stat1 stat3\""
-        - grid-template-columns: 1fr 1fr
-        - grid-template-rows: 50px min-content 30px min-content
-      name:
-        - justify-self: start
-        - font-size: 14px
-        - opacity: 0.7
-      icon:
-        - width: 24px
-      img_cell:
-        - justify-self: start
-        - align-self: start
-        - width: 34px
-        - height: 34px
+  - type: conditional
+    conditions:
+      - condition: or
+        conditions:
+          - condition: state
+            entity: select.iopool_{POOL_NAME}_pool_mode
+            state: Standard
+          - condition: state
+            entity: select.iopool_{POOL_NAME}_pool_mode
+            state: Active-Winter
+    card:
+      type: custom:button-card
+      entity: sensor.iopool_{POOL_NAME}_elapsed_filtration_duration
+      name: Filtration
+      icon: mdi:water-boiler
+      action: more-info
+      styles:
+        card:
+          - padding: 20px
+          - height: 140px
+        grid:
+          - grid-template-areas: "\"i recommanded\" \"n stat2\" \"bar bar\" \"stat1 stat3\""
+          - grid-template-columns: 1fr 1fr
+          - grid-template-rows: 50px min-content 30px min-content
+        name:
+          - justify-self: start
+          - font-size: 14px
+          - opacity: 0.7
+        icon:
+          - width: 24px
+        img_cell:
+          - justify-self: start
+          - align-self: start
+          - width: 34px
+          - height: 34px
+        custom_fields:
+          recommanded:
+            - justify-self: end
+            - align-self: center
+            - padding-bottom: 6px
+            - font-size: 12px
+            - font-weight: 500
+          stat1:
+            - justify-self: start
+            - font-size: 10px
+            - opacity: 0.7
+          stat2:
+            - justify-self: end
+            - font-size: 12px
+            - opacity: 0.7
+            - font-weight: 500
+          stat3:
+            - justify-self: end
+            - font-size: 10px
+            - opacity: 0.7
+          bar:
+            - justify-self: start
+            - margin-top: "-4px"
+            - width: 100%
+            - border-radius: 6px
+            - background: var(--contrast5)
+            - height: 12px
       custom_fields:
-        recommanded:
-          - justify-self: end
-          - align-self: center
-          - padding-bottom: 6px
-          - font-size: 12px
-          - font-weight: 500
-        stat1:
-          - justify-self: start
-          - font-size: 10px
-          - opacity: 0.7
-        stat2:
-          - justify-self: end
-          - font-size: 12px
-          - opacity: 0.7
-          - font-weight: 500
-        stat3:
-          - justify-self: end
-          - font-size: 10px
-          - opacity: 0.7
-        bar:
-          - justify-self: start
-          - margin-top: "-4px"
-          - width: 100%
-          - border-radius: 6px
-          - background: var(--contrast5)
-          - height: 12px
-    custom_fields:
-      recommanded: |
-        [[[
-          var iopool_recommanded = states['sensor.iopool_{POOL_NAME}_filtration_recommendation'].state;
-          return "Recommandation iopool: " + new Date(iopool_recommanded * 60 * 1000).toISOString().substr(11, 8);
-        ]]]
-      bar: |
-        [[[
-          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
-          var elapsed = Math.round(entity.state * 60, 2);
-          var elapsed_percent = Math.round(Math.min(100,((elapsed/duration)*100)),2);
-          return `<div> <div style="background: var(--blue); height: 12px; width: ${elapsed_percent}%"></div> </div>`;
-        ]]]
-      stat2: |
-        [[[
-          var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
-          var elapsed = Math.round(entity.state * 60, 2);
-          var elapsed_percent = Math.round(((elapsed/duration)*100),2);
-          return "Effectuée: " + new Date(elapsed * 60 * 1000).toISOString().substr(11,8) + " / " + elapsed_percent + "%";
-        ]]]
-      stat3: >
-        [[[
-          return new Date(states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes * 60 * 1000).toISOString().substr(11, 8);
-        ]]]
+        recommanded: |
+          [[[
+            var iopool_recommanded = states['sensor.iopool_{POOL_NAME}_filtration_recommendation'].state;
+            return "Recommandation iopool: " + new Date(iopool_recommanded * 60 * 1000).toISOString().substr(11, 8);
+          ]]]
+        bar: |
+          [[[
+            var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
+            var elapsed = Math.round(entity.state * 60, 2);
+            var elapsed_percent = Math.round(Math.min(100,((elapsed/duration)*100)),2);
+            return `<div> <div style="background: var(--blue); height: 12px; width: ${elapsed_percent}%"></div> </div>`;
+          ]]]
+        stat2: |
+          [[[
+            var duration = states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes;
+            var elapsed = Math.round(entity.state * 60, 2);
+            var elapsed_percent = Math.round(((elapsed/duration)*100),2);
+            return "Effectuée: " + new Date(elapsed * 60 * 1000).toISOString().substr(11,8) + " / " + elapsed_percent + "%";
+          ]]]
+        stat3: >
+          [[[
+            return new Date(states['binary_sensor.iopool_{POOL_NAME}_filtration'].attributes.filtration_duration_minutes * 60 * 1000).toISOString().substr(11, 8);
+          ]]]
   - type: conditional
     conditions:
       - condition: state
@@ -663,6 +674,7 @@ cards:
             bar_height: 12px
             bar_radius: 4px
             layout: full_row
+            text_width: 4em
             tap_action:
               action: none
             hold_action:
