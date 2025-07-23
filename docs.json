@@ -65,6 +65,11 @@
           "title": "Events",
           "href": "/integration/events",
           "icon": "terminal"
+        },
+        {
+          "title": "Custom Dashboard Card",
+          "href": "/integration/custom-card",
+          "icon": "chart-line"
         }
       ]
     },
@@ -74,7 +79,7 @@
       "pages": [
         {
           "title": "Contributing",
-          "href": "/misc/contributing",
+          "href": "/integration/misc/contributing",
           "icon": "heart"
         }
       ]
