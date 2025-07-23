@@ -213,7 +213,7 @@ class IopoolSelect(IopoolEntity, SelectEntity):
                 if pool.mode == "WINTER":
                     return "Passive-Winter"
         # Default to first option if no match found
-        return self.entity_description.options[0]
+        return self.options[0] if self.options else "Unknown"
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
