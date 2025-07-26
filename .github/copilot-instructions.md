@@ -32,6 +32,28 @@
   - [developers.home-assistant.io](https://developers.home-assistant.io)
 - Use these resources to ensure compatibility and best practices with Home Assistant integrations.
 
+## Pull Request Best Practices
+
+- **Title:**
+  - The PR title MUST follow the same format as the commit message guidelines (see below):
+    `<type>[optional scope]: <gitmoji> <description>`
+  - The title should summarize the main purpose of the PR.
+
+- **Description:**
+  - The PR description MUST provide a clear summary of all changes included in the PR.
+  - List and briefly explain each commit included in the PR.
+  - For each commit, include a direct link to the commit (e.g., `https://github.com/mguyard/hass-iopool/commit/<sha>`).
+  - If the PR addresses or closes issues, reference them using GitHub keywords (e.g., `Closes #123`).
+  - Use bullet points for clarity if needed.
+
+- **Branch:**
+  - All PRs MUST use `dev` as the base branch.
+
+- **General:**
+  - Ensure your PR is focused and does not mix unrelated changes.
+  - Follow all other project and commit message guidelines described above.
+
+
 ## Commit Message Guidelines
 
 - **Format:**  
