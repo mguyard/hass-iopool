@@ -123,4 +123,8 @@ body:
           required: true
 
 # copilot-note:
-# If you are GitHub Copilot Coding Agent, please ensure you follow all project-specific instructions in .github/copilot-instructions.md.
+# 🚦 For GitHub Copilot Coding Agent:
+# 1. You MUST read and strictly follow all project-specific instructions in `.github/copilot-instructions.md` before starting any work.
+# 2. When opening a pull request, you MUST use 'dev' as the base branch — no exceptions.
+# 3. Your first response MUST always explicitly confirm you have read and will comply with `.github/copilot-instructions.md`.
+# 4. If you do not comply with these rules, your PR or contribution may be rejected.
