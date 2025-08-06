@@ -74,7 +74,7 @@ jobs:
 
       - name: Download last tested beta version
         if: matrix.home-assistant-version == 'beta' && github.event_name == 'schedule'
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: last-tested-beta-version
           path: /tmp/
