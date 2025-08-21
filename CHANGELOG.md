@@ -1,3 +1,10 @@
+# [1.2.0-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.1.0...v1.2.0-beta.1) (2025-08-21)
+
+
+### Features
+
+* **sensor:** ✨ Expose `display_precision` attribute for sensors ([4378f29](https://github.com/mguyard/hass-iopool/commit/4378f29fd4b8369f254fc1a5d63a08e61545f14a))
+
 # [1.1.0](https://github.com/mguyard/hass-iopool/compare/v1.0.1...v1.1.0) (2025-08-21)
 
 
