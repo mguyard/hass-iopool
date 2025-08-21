@@ -21,7 +21,7 @@ The iopool integration creates a device for each pool detected through the API, 
 | Elapsed Filtration Duration (sensor) | Total filtration time elapsed today (in minutes)                                      | **Advanced**: Only if filtration automation is enabled            |
 | Action Required (binary_sensor)     | Indicates if maintenance action is needed                                              | Always                                                            |
 | Filtration (binary_sensor)          | Indicates if the filtration system is currently running                                | **Advanced**: Only if filtration automation is enabled            |
-| Boost Selector (select)             | Allows temporary boost of filtration (1h, 4h, 8h, 24h)                                 | **Advanced**: Only if filtration automation is enabled            |
+| Boost Selector (select)             | Allows temporary boost of filtration (1h, 2h, 4h, 8h, 24h)                                 | **Advanced**: Only if filtration automation is enabled            |
 | Pool Mode (select)                  | Allows switching between Standard, Active-Winter, Passive-Winter modes                 | **Advanced**: Only if filtration automation is enabled            |
 
 <Info>
@@ -135,7 +135,7 @@ Indicates if the filtration system is currently running.
 
 ## Boost Selector (Advanced)
 
-Allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h.
+Allows you to temporarily increase filtration for 1h, 2h, 4h, 8h, or 24h.
 
 <Info>
 **This select entity is only available if filtration automation is enabled and a switch entity is configured in the integration options.**
@@ -144,6 +144,7 @@ Allows you to temporarily increase filtration for 1h, 4h, 8h, or 24h.
 Options :
 - `None`
 - `1H`
+- `2H`
 - `4H`
 - `8H`
 - `24H`

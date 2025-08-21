@@ -1,3 +1,27 @@
+# [1.1.0-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.1.0-beta.1...v1.1.0-beta.2) (2025-07-23)
+
+
+### Bug Fixes
+
+* **config_flow:** 🐛 Correct API key validation result handling ([1211f0b](https://github.com/mguyard/hass-iopool/commit/1211f0b96a874180a4834eb923ca93a5f54451ec))
+* **config_flow:** 🐛 Update error handling for API key validation ([6d23858](https://github.com/mguyard/hass-iopool/commit/6d238583e8012be0ddcd249817bcbad37514ecad))
+* **coordinator:** 🐛 Handle ServerTimeoutError in API data fetching ([9150e2c](https://github.com/mguyard/hass-iopool/commit/9150e2c4d2670016c52254281c9bcdeb440f5cc6))
+* **select:** 🐛 Handle empty options in `IopoolSelect` ([17de1a0](https://github.com/mguyard/hass-iopool/commit/17de1a01b350f9acf7ae6639c173d7077c8bfbd9))
+* **workflow:** 🐛 Add asyncio-mode=auto for pytest async tests ([386c38a](https://github.com/mguyard/hass-iopool/commit/386c38a62166eb6af64cf6e18b3225b092432f21))
+* **workflow:** 🐛 Specify explicit path for JUnit XML file in CodeCov test results ([d47bcc9](https://github.com/mguyard/hass-iopool/commit/d47bcc93c5c2afeb054184132bd344f7df71bb48))
+
+
+### Features
+
+* **workflow:** 🎯 Improve manual execution logic and schedule timing ([3997dd4](https://github.com/mguyard/hass-iopool/commit/3997dd4eef90fc662d0cad3a7d3dafb578545b49))
+
+# [1.1.0-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.0.1...v1.1.0-beta.1) (2025-07-11)
+
+
+### Features
+
+* Add 2H boost option to filtration control ([7c6307a](https://github.com/mguyard/hass-iopool/commit/7c6307a3720fa341c78968fe320f24378bb90eb7))
+
 # [1.0.1](https://github.com/mguyard/hass-iopool/compare/v1.0.0...v1.0.1) (2025-07-06)
 
 

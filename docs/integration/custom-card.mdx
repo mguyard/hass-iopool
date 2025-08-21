@@ -1,0 +1,212 @@
+---
+title: Custom Dashboard Card
+previous: /integration/events
+previousTitle: Events
+next: /integration/misc/contributing
+nextTitle: Misc
+---
+
+This page explains how to add a custom dashboard card for your iopool integration in Home Assistant. You can personalize the card by entering your pool name below. The YAML code will update automatically.
+
+> **Tip:** Replace `mypool` with the actual name of your pool entity (e.g., `home`, `garden`, etc.).
+
+<Steps>
+    <Step title="Install required custom cards with HACS">
+        - [Vertical Stack In Card](https://github.com/ofekashery/vertical-stack-in-card)
+        - [Mushroom](https://github.com/piitaya/lovelace-mushroom)
+        - [button-card](https://github.com/custom-cards/button-card)
+        - [mini-graph-card](https://github.com/kalkih/mini-graph-card)
+        - [Pool Monitor Card](https://github.com/wilsto/pool-monitor-card)
+        - [Timer Bar Card](https://github.com/rianadon/timer-bar-card)
+
+        <Info>All these cards are available in HACS. Install them before proceeding.</Info>
+    </Step>
+  <Step title="Enter your pool and pump entity names">
+  Enter the name of your pool as defined in iopool (this is the dynamic part of your entity IDs, e.g. `sensor.iopool_XXX_temperature`).
+
+  Also, enter the entity ID of your pool pump (e.g. `switch.pool_pump`).
+  These values will be used to personalize the YAML code below.
+    <CustomPoolNameInput />
+    <CustomPumpInput />
+  </Step>
+    <Step title="Copy and paste the YAML code below into your Home Assistant dashboard">
+        Create a new `Manual` card in your dashboard and paste the YAML content below.
+
+        <Warning>The YAML code shown below is a partial preview. To get the complete YAML, please use the Copy button in the top right corner.</Warning>
+
+        <CustomCodeBlock inputId="pool-name-input" />
+    </Step> 
+</Steps>
+
+<Warning>There is currently a [bug](https://github.com/wilsto/pool-monitor-card/issues/68) in the [Pool Monitor Card](https://github.com/wilsto/pool-monitor-card) that displays too many decimal.</Warning>
+
+<Image src="/images/dashboard-card.png" alt="Dashboard Card" />
+
+
+<!-- Custom component for pool name input and dynamic YAML code block -->
+
+export const CustomPoolNameInput = props => {
+  let inputRef = null;
+  return (
+    <div style={{marginBottom: '1em'}}>
+      <label htmlFor="pool-name-input" style={{fontWeight:600, marginRight:8}}>Pool name:</label>
+      <input
+        id="pool-name-input"
+        type="text"
+        defaultValue="mypool"
+        ref={el => (inputRef = el)}
+        style={{padding:'4px 8px', borderRadius:4, border:'1px solid #ccc', minWidth:120}}
+        placeholder="e.g. mypool"
+      />
+    </div>
+  );
+}
+
+export const CustomPumpInput = props => {
+  let inputRef = null;
+  return (
+    <div style={{marginBottom: '1.5em'}}>
+      <label htmlFor="pump-entity-input" style={{fontWeight:600, marginRight:8}}>Pump entity:</label>
+      <input
+        id="pump-entity-input"
+        type="text"
+        defaultValue="switch.pool_pump"
+        ref={el => (inputRef = el)}
+        style={{padding:'4px 8px', borderRadius:4, border:'1px solid #ccc', minWidth:180}}
+        placeholder="e.g. switch.pool_pump"
+      />
+    </div>
+  );
+}
+
+export const CustomCodeBlock = ({ inputId }) => {
+  let codeRef = null;
+  let buttonRef = null;
+  let template = '';
+  let templateLoaded = false;
+  let loading = false;
+  let error = null;
+
+  // Fetch YAML template from GitHub raw URL (only once per page load)
+  function fetchTemplate(callback) {
+    if (window._iopool_card_template) {
+      template = window._iopool_card_template;
+      templateLoaded = true;
+      callback();
+      return;
+    }
+    if (loading) return;
+    loading = true;
+    fetch('https://raw.githubusercontent.com/mguyard/hass-iopool/refs/heads/beta/docs/resources/card-template.yaml')
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load YAML template');
+        return res.text();
+      })
+      .then((text) => {
+        window._iopool_card_template = text;
+        template = text;
+        templateLoaded = true;
+        loading = false;
+        callback();
+      })
+      .catch((err) => {
+        error = err.message;
+        loading = false;
+        callback();
+      });
+  }
+
+  function getYaml() {
+    const poolInput = document.getElementById('pool-name-input');
+    const pumpInput = document.getElementById('pump-entity-input');
+    const poolName = poolInput?.value || 'mypool';
+    const pumpEntity = pumpInput?.value || 'switch.pool_pump';
+    return template.replaceAll('{POOL_NAME}', poolName).replaceAll('{POOL_PUMPNAME}', pumpEntity);
+  }
+
+  function getPreviewYamlParts() {
+    const full = getYaml();
+    const lines = full.split('\n');
+    if (lines.length > 50) {
+      return {
+        preview: lines.slice(0, 50).join('\n'),
+        truncated: true
+      };
+    }
+    return { preview: full, truncated: false };
+  }
+
+  function updateYaml() {
+    if (!templateLoaded) {
+      if (codeRef) codeRef.innerHTML = 'Loading YAML template...';
+      fetchTemplate(() => {
+        if (error) {
+          if (codeRef) codeRef.innerHTML = 'Error: ' + error;
+        } else {
+          const { preview, truncated } = getPreviewYamlParts();
+          if (codeRef) codeRef.innerHTML = truncated
+            ? preview + '<br/><span style="color: orange; font-weight: bold;">... (truncated, use the Copy button for full YAML)</span>'
+            : preview;
+        }
+      });
+      return;
+    }
+    const { preview, truncated } = getPreviewYamlParts();
+    if (codeRef) codeRef.innerHTML = truncated
+      ? preview + '<br/><span style="color: orange; font-weight: bold;">... (truncated, use the Copy button for full YAML)</span>'
+      : preview;
+  }
+
+  function copyToClipboard() {
+    if (!templateLoaded) return;
+    navigator.clipboard.writeText(getYaml());
+    if (buttonRef) {
+      buttonRef.textContent = "Copied!";
+      setTimeout(() => (buttonRef.textContent = "Copy"), 1200);
+    }
+  }
+
+  if (typeof window !== 'undefined') {
+    setTimeout(() => {
+      const poolInput = document.getElementById('pool-name-input');
+      const pumpInput = document.getElementById('pump-entity-input');
+      if (poolInput) poolInput.addEventListener('input', updateYaml);
+      if (pumpInput) pumpInput.addEventListener('input', updateYaml);
+      updateYaml();
+    }, 0);
+  }
+
+  return (
+    <div style={{
+      position: 'relative',
+      background: '#23272e',
+      borderRadius: '8px',
+      padding: '1.2em 1em 1em 1em',
+      margin: '1em 0',
+      fontFamily: 'monospace',
+      fontSize: '15px',
+      color: '#e6e6e6',
+      overflowX: 'auto'
+    }}>
+      <button
+        ref={el => (buttonRef = el)}
+        onClick={copyToClipboard}
+        style={{
+          position: 'absolute',
+          top: '10px',
+          right: '16px',
+          background: '#23272e',
+          color: '#bdbdbd',
+          border: '1px solid #444',
+          borderRadius: '6px',
+          padding: '2px 12px',
+          fontSize: '13px',
+          cursor: 'pointer'
+        }}
+      >Copy</button>
+      <pre style={{margin: 0, background: 'none', color: 'inherit'}}>
+        <code ref={el => (codeRef = el)} />
+      </pre>
+    </div>
+  );
+};

@@ -30,7 +30,7 @@ from .models import IopoolConfigData, IopoolConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
-BOOST_OPTIONS: Final = ["None", "1H", "4H", "8H", "24H"]
+BOOST_OPTIONS: Final = ["None", "1H", "2H", "4H", "8H", "24H"]
 MODE_OPTIONS: Final = ["Standard", "Active-Winter", "Passive-Winter"]
 
 # Entity descriptions for each pool
@@ -213,7 +213,7 @@ class IopoolSelect(IopoolEntity, SelectEntity):
                 if pool.mode == "WINTER":
                     return "Passive-Winter"
         # Default to first option if no match found
-        return self.entity_description.options[0]
+        return self.options[0] if self.options else "Unknown"
 
     async def async_select_option(self, option: str) -> None:
         """Change the selected option."""
@@ -262,7 +262,7 @@ class IopoolSelect(IopoolEntity, SelectEntity):
 
             # If a boost time is selected, schedule end time
             if option != "None":
-                # Parse the boost duration (1H, 4H, 8H, 24H)
+                # Parse the boost duration (1H, 2H, 4H, 8H, 24H)
                 match = re.match(r"(\d+)H", option)
                 if match:
                     hours = int(match.group(1))

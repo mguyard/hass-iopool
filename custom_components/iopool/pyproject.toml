@@ -1,0 +1,8 @@
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+filterwarnings = [
+    # Supprimer seulement les warnings spécifiques à nos mocks aiohttp
+    "ignore:Setting custom ClientSession.close attribute is discouraged:DeprecationWarning:homeassistant.helpers.aiohttp_client",
+    # Supprimer les warnings ResourceWarning pour les sessions non fermées dans les tests
+    "ignore:Unclosed client session:ResourceWarning",
+]

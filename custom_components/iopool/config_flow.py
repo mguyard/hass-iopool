@@ -267,9 +267,9 @@ class IopoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 return self.async_abort(reason="no_changes")
 
             # Validate the new API key
-            result, response = await get_iopool_data(self.hass, api_key)
+            result = await get_iopool_data(self.hass, api_key)
 
-            if result == ApiKeyValidationResult.SUCCESS:
+            if result.result_code == ApiKeyValidationResult.SUCCESS:
                 # Update the existing entry
                 return self.async_update_reload_and_abort(
                     config_entry,
@@ -279,7 +279,7 @@ class IopoolConfigFlow(ConfigFlow, domain=DOMAIN):
                 )
 
             # Set appropriate error
-            errors["base"] = result.value
+            errors["base"] = result.result_code.value
 
         # Build form with existing API key as default
         schema = vol.Schema(
