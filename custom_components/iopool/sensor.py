@@ -280,6 +280,19 @@ class IopoolSensor(IopoolEntity, SensorEntity):
                 }
             )
 
+        # If the entity description suggests a display precision, expose it
+        # as an attribute so frontends or automations can use it.
+        try:
+            precision = getattr(
+                self.entity_description, "suggested_display_precision", None
+            )
+        except Exception:
+            precision = None
+
+        if precision is not None:
+            # Ensure we return a plain int (or similar) in attributes
+            attributes["display_precision"] = int(precision)
+
         return attributes
 
     def _get_pool(self) -> IopoolAPIResponsePool | None:
