@@ -42,6 +42,7 @@ The ideal temperature depends on the type of pool or spa and personal preference
 - `measured_at`: Timestamp of when the measurement was taken
 - `is_valid`: Boolean indicating if the measurement is considered valid
 - `measure_mode`: The mode in which the measurement was taken (standard, live, maintenance, etc.)
+- `display_precision`: Number of decimal places used when displaying the temperature value (e.g., `1` for 25.3°C, `0` for 25°C)
 
 ---
 
@@ -54,9 +55,10 @@ The recommended pH level for swimming pools is between 7.1 and 7.7. Maintaining 
 </Info>
 
 **Attributes:**
-- `measured_at`
-- `is_valid`
-- `measure_mode`
+- `measured_at`: Timestamp of when the pH measurement was taken
+- `is_valid`: Boolean indicating if the pH measurement is considered valid
+- `measure_mode`: The mode in which the pH measurement was taken (standard, live, maintenance, etc.)
+- `display_precision`: Number of decimal places used when displaying the pH value (e.g., `2` for 7.34, `1` for 7.3)
 
 ---
 
@@ -69,9 +71,9 @@ The ideal ORP range for swimming pools is between 650mV and 800mV. An ORP level 
 </Info>
 
 **Attributes:**
-- `measured_at`
-- `is_valid`
-- `measure_mode`
+- `measured_at`: Timestamp of when the ORP measurement was taken
+- `is_valid`: Boolean indicating if the ORP measurement is considered valid
+- `measure_mode`: The mode in which the ORP measurement was taken (standard, live, maintenance, etc.)
 
 ---
 
