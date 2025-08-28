@@ -704,6 +704,9 @@ class TestIopoolSensorProperties:
         assert attributes["is_valid"] is True
         assert attributes["measure_mode"] == "standard"
         assert attributes["measured_at"] == local_datetime
+        assert (
+            attributes["display_precision"] == 2
+        )  # Temperature sensor has suggested_display_precision=2
         mock_as_local.assert_called_once()
 
     def test_extra_state_attributes_no_measure(self) -> None:
@@ -725,4 +728,55 @@ class TestIopoolSensorProperties:
         )
 
         attributes = sensor.extra_state_attributes
-        assert attributes == {}
+        # Should still include display_precision even without measure data
+        assert attributes == {"display_precision": 2}
+
+    def test_extra_state_attributes_display_precision(self) -> None:
+        """Test that display_precision is included when suggested_display_precision is set."""
+        mock_coordinator = MagicMock()
+        mock_pool = MagicMock()
+        mock_pool.latest_measure = None
+        mock_coordinator.get_pool_data.return_value = mock_pool
+
+        # Test with temperature sensor (has suggested_display_precision=2)
+        temp_sensor_desc = next(
+            desc for desc in POOL_SENSORS if desc.key == "temperature"
+        )
+        sensor = IopoolSensor(
+            mock_coordinator,
+            temp_sensor_desc,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        attributes = sensor.extra_state_attributes
+        assert "display_precision" in attributes
+        assert attributes["display_precision"] == 2
+
+        # Test with pH sensor (also has suggested_display_precision=2)
+        ph_sensor_desc = next(desc for desc in POOL_SENSORS if desc.key == "ph")
+        ph_sensor = IopoolSensor(
+            mock_coordinator,
+            ph_sensor_desc,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        ph_attributes = ph_sensor.extra_state_attributes
+        assert "display_precision" in ph_attributes
+        assert ph_attributes["display_precision"] == 2
+
+        # Test with ORP sensor (no suggested_display_precision)
+        orp_sensor_desc = next(desc for desc in POOL_SENSORS if desc.key == "orp")
+        orp_sensor = IopoolSensor(
+            mock_coordinator,
+            orp_sensor_desc,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+        )
+
+        orp_attributes = orp_sensor.extra_state_attributes
+        assert "display_precision" not in orp_attributes

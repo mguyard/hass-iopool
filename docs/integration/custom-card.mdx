@@ -38,7 +38,11 @@ This page explains how to add a custom dashboard card for your iopool integratio
     </Step> 
 </Steps>
 
-<Warning>There is currently a [bug](https://github.com/wilsto/pool-monitor-card/issues/68) in the [Pool Monitor Card](https://github.com/wilsto/pool-monitor-card) that displays too many decimal.</Warning>
+<Warning>
+There is currently an [open issue](https://github.com/wilsto/pool-monitor-card/issues/68) with the [Pool Monitor Card](https://github.com/wilsto/pool-monitor-card) that causes values to display with excessive decimal places.
+A new feature addressing this was added in [commit](https://github.com/wilsto/pool-monitor-card/commit/2043581f48138560ca82eac57835dcea084924a6), but it has not yet been released in a production version.
+The iopool integration is already prepared for this update and exposes `display_precision` for each sensor where `suggested_display_precision` is set.
+</Warning>
 
 <Image src="/images/dashboard-card.png" alt="Dashboard Card" />
 
