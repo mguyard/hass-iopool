@@ -281,7 +281,7 @@ jobs:
 
       - name: Upload tested beta version record
         if: matrix.home-assistant-version == 'beta' && env.SKIP_TESTS != 'true' && github.event_name == 'schedule'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: last-tested-beta-version
           path: /tmp/last-tested-beta.txt
@@ -307,7 +307,7 @@ jobs:
 
       - name: Upload test results
         if: always() && env.SKIP_TESTS != 'true'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: test-results-py${{ matrix.python-version }}-ha${{ matrix.home-assistant-version }}
           path: |
