@@ -1,3 +1,10 @@
+## [1.2.1-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.0...v1.2.1-beta.1) (2025-10-25)
+
+
+### Bug Fixes
+
+* **binary_sensor:** 🐛 Preserve dynamic attributes in Active-Winter mode ([f06e9c1](https://github.com/mguyard/hass-iopool/commit/f06e9c1a49262b173a108cee1bea1e54949139cd)), closes [#34](https://github.com/mguyard/hass-iopool/issues/34)
+
 # [1.2.0](https://github.com/mguyard/hass-iopool/compare/v1.1.0...v1.2.0) (2025-08-28)
 
 

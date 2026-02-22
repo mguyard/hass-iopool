@@ -361,6 +361,15 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
                         attributes["winter_filtration_end"] = dt_util.as_local(
                             winter_filtration_end
                         ).isoformat()
+                    # Preserve existing attributes that we want to keep
+                    preserved_attrs = [
+                        "next_stop_time",
+                        "active_slot",
+                    ]
+                    if state and state.attributes:
+                        for attr in preserved_attrs:
+                            if attr in state.attributes:
+                                attributes[attr] = state.attributes[attr]
                 if pool_mode == "Passive-Winter":
                     # If pool_mode is Passive-Winter and other mode attributes are set,
                     # we remove them to avoid confusion
