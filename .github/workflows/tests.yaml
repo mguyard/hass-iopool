@@ -172,10 +172,9 @@ jobs:
 
       - name: Install Home Assistant Core
         run: |
-          pip install --upgrade pip setuptools wheel
-
           STABLE_VERSION="${{ steps.ha-versions.outputs.stable }}"
           BETA_VERSION="${{ steps.ha-versions.outputs.beta }}"
+          HA_TO_INSTALL=""
 
           echo "🚀 Job: ${{ matrix.home-assistant-version }} on Python ${{ matrix.python-version }}"
           echo "🔧 Trigger: ${{ github.event_name }}"
@@ -210,16 +209,14 @@ jobs:
                 echo "SKIP_REASON=Beta version $BETA_VERSION already tested" >> $GITHUB_ENV
               else
                 echo "✅ New beta version ($BETA_VERSION) → Beta job WILL run"
-                echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
-                pip install homeassistant==$BETA_VERSION
+                HA_TO_INSTALL="$BETA_VERSION"
                 echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
               fi
 
             elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
               if [[ "${{ inputs.ha_version }}" == "beta" ]]; then
                 echo "🔧 MANUAL trigger + beta selected → Beta job WILL run"
-                echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
-                pip install homeassistant==$BETA_VERSION
+                HA_TO_INSTALL="$BETA_VERSION"
                 echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
               else
                 echo "🔧 MANUAL trigger + stable selected → Beta job SKIPPED"
@@ -231,8 +228,7 @@ jobs:
               echo "🚀 PUSH/PR trigger → Checking if beta is newer than stable"
               if compare_versions "$BETA_VERSION" "$STABLE_VERSION"; then
                 echo "✅ Beta ($BETA_VERSION) > Stable ($STABLE_VERSION) → Beta job WILL run"
-                echo "📦 Installing Home Assistant BETA: $BETA_VERSION"
-                pip install homeassistant==$BETA_VERSION
+                HA_TO_INSTALL="$BETA_VERSION"
                 echo "HA_VERSION=$BETA_VERSION" >> $GITHUB_ENV
               else
                 echo "⏭️ Beta ($BETA_VERSION) ≤ Stable ($STABLE_VERSION) → Beta job SKIPPED"
@@ -257,16 +253,14 @@ jobs:
                 echo "SKIP_REASON=Stable version $STABLE_VERSION already tested" >> $GITHUB_ENV
               else
                 echo "✅ New stable version ($STABLE_VERSION) → Stable job WILL run"
-                echo "📦 Installing Home Assistant STABLE: $STABLE_VERSION"
-                pip install homeassistant==$STABLE_VERSION
+                HA_TO_INSTALL="$STABLE_VERSION"
                 echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
               fi
 
             elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
               if [[ "${{ inputs.ha_version }}" == "stable" ]]; then
                 echo "🔧 MANUAL trigger + stable selected → Stable job WILL run"
-                echo "📦 Installing Home Assistant STABLE: $STABLE_VERSION"
-                pip install homeassistant==$STABLE_VERSION
+                HA_TO_INSTALL="$STABLE_VERSION"
                 echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
               else
                 echo "🔧 MANUAL trigger + beta selected → Stable job SKIPPED"
@@ -276,10 +270,17 @@ jobs:
 
             else
               echo "🚀 PUSH/PR trigger → Stable job ALWAYS runs"
-              echo "📦 Installing Home Assistant STABLE: $STABLE_VERSION"
-              pip install homeassistant==$STABLE_VERSION
+              HA_TO_INSTALL="$STABLE_VERSION"
               echo "HA_VERSION=$STABLE_VERSION" >> $GITHUB_ENV
             fi
+          fi
+
+          # Upgrade pip toolchain and install HA only when actually needed
+          if [[ -n "$HA_TO_INSTALL" ]]; then
+            echo "⬆️ Upgrading pip toolchain..."
+            pip install --upgrade pip setuptools wheel
+            echo "📦 Installing Home Assistant: $HA_TO_INSTALL"
+            pip install homeassistant==$HA_TO_INSTALL
           fi
 
       - name: Install test dependencies
