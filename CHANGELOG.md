@@ -1,3 +1,10 @@
+## [1.2.2-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.1...v1.2.2-beta.1) (2026-03-14)
+
+
+### Bug Fixes
+
+* **ci:** 🐛 Skip beta on schedule when beta <= stable ([711cd45](https://github.com/mguyard/hass-iopool/commit/711cd45641f35ddb69ae4daa0445ed234853aece))
+
 ## [1.2.1-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.2.1-beta.1...v1.2.1-beta.2) (2026-03-14)
 
 
