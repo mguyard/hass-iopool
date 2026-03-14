@@ -16,13 +16,79 @@
 - **Documentation:**  
   - All files in `docs/` and `docs.json` are documentation and must use the `docs` commit type.
   - Documentation is in Markdown or MDX, and must be clear and concise.
+  - Entity reference: `docs/integration/entities.mdx` — keep it up to date when adding/removing entities.
 - **Testing:**  
-  - Use `pytest` conventions for tests (if/when present).
-  - Place tests in a `tests/` directory.
-  - **Always suggest adding or updating tests when new features or bug fixes are implemented.**
+  - Use `pytest` conventions for tests.
+  - Tests live in `custom_components/iopool/tests/`.
+  - **Always add or update tests when implementing features or bug fixes.**
 - **Linting/Formatting:**  
-  - Use `flake8` as the linter, with a maximum line length of 150 characters (see `.vscode/settings.json`).
-  - You may also use `black` for formatting if desired, but `flake8` is required for linting.
+  - Use `flake8` as the linter, with a maximum line length of 150 characters.
+  - You may also use `black` for formatting, but `flake8` is required for linting.
+
+## Dev Environment & Commands
+
+> Tests require a full Home Assistant dev container (`/workspaces/home-assistant-dev`).
+
+```bash
+# Run all tests (from within the HA dev container)
+cd /workspaces/home-assistant-dev/config
+PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/
+
+# Verbose with short tracebacks
+PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/ -v --tb=short
+
+# With coverage
+PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/ --cov=. --cov-report=term-missing
+
+# Shortcut scripts (auto-configure PYTHONPATH)
+./custom_components/iopool/tests/run_tests.sh
+./custom_components/iopool/run_tests.sh
+
+# Lint
+flake8 custom_components/iopool/ --max-line-length=150
+```
+
+> ⚠️ **Never create a `pytest.ini`** file — it breaks async test discovery. Config lives in `pyproject.toml` (`asyncio_mode = "auto"`).
+
+## Architecture
+
+### Data Flow
+
+```
+Config Flow → ConfigEntry.runtime_data (IopoolData)
+                    ├── coordinator  (IopoolDataUpdateCoordinator)  — polls API every 5 min
+                    ├── filtration   (Filtration)                   — time-based scheduling
+                    └── setup_time_events                           — callback reference
+```
+
+### Key Files
+
+| File | Role |
+|------|------|
+| `__init__.py` | Entry setup, platform loading, runtime_data assembly |
+| `coordinator.py` | `DataUpdateCoordinator` — fetches `IopoolAPIResponse` |
+| `api_models.py` | Dataclass models for raw API responses |
+| `models.py` | `IopoolData`, `IopoolConfigData`, filtration option dataclasses |
+| `const.py` | All constants: domain, sensor keys, event types, API URLs |
+| `entity.py` | `IopoolEntity(CoordinatorEntity, RestoreEntity)` base class |
+| `sensor.py` | Sensor platform (temperature, pH, ORP, mode, recommendations) |
+| `binary_sensor.py` | Binary sensor platform (action required, filtration active) |
+| `select.py` | Select platform (boost selector, pool mode selectors) |
+| `filtration.py` | Time-based filtration slot scheduling (`async_track_time_change`) |
+
+### Platform Loading Order
+
+```python
+PLATFORMS = [Platform.SENSOR, Platform.SELECT, Platform.BINARY_SENSOR]
+```
+
+⚠️ **Order matters:** `sensor` must load before `binary_sensor`; filtration entities have a dependency on it.
+
+### Manifest Highlights
+
+- **Domain:** `iopool` | **IoT class:** `cloud_polling` | **Type:** `hub`
+- **Quality scale:** `bronze` | **Dependencies:** `["cloud", "history_stats"]`
+- **Docs:** https://docs.page/mguyard/hass-iopool
 
 ## External Context and Libraries
 
@@ -131,30 +197,7 @@
 - When generating commit messages, follow the Conventional Commits and gitmoji rules above.
 - When working with Home Assistant, prefer async APIs and follow the entity/component patterns in the codebase.
 - All configuration, code, and documentation must be consistent with the existing project structure and standards.
-- **Always suggest adding or updating tests for new features or bug fixes.**
+- **Always add or update tests when implementing features or bug fixes.**
 - **Enforce flake8 linting with a max line length of 150 characters.**
-
----
-
-These instructions are designed to help GitHub Copilot and Copilot Coding Agent generate code, documentation, and commit messages that are consistent with the project's standards and best practices.
-- Prefer list comprehensions and generator expressions for concise code.
-- Avoid global variables.
-- Use constants for configuration values.
-
-## Home Assistant Integration
-
-- Follow [Home Assistant custom component guidelines](https://developers.home-assistant.io/docs/creating_component_index/).
-- Entities should have unique IDs and meaningful names.
-- Use translations for entity names and options.
-- Ensure all entities are documented in `docs/integration/entities.mdx`.
-
-## For Copilot Coding Agent
-
-- When asked to create or modify files, always use English for code, comments, and docstrings.
-- When generating documentation, use Markdown or MDX and English.
-- When generating commit messages, follow the Conventional Commits and gitmoji rules above.
-- When working with Home Assistant, prefer async APIs and follow the entity/component patterns in the codebase.
-- All configuration, code, and documentation must be consistent with the existing project structure and standards.
-
----
-These instructions are designed to help GitHub Copilot and Copilot Coding Agent generate code, documentation, and commit messages that are consistent with the project's standards and best practices.
+- Before editing code, read the relevant file(s) to understand existing patterns.
+- When adding a new entity, update `docs/integration/entities.mdx` and both translation files (`en.json`, `fr.json`).
