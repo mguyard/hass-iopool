@@ -9,7 +9,9 @@
 	<img src="https://img.shields.io/github/last-commit/mguyard/hass-iopool?style=default&color=0080ff" alt="Last Commit">
 	<img src="https://img.shields.io/github/languages/top/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-top-language">
 	<img src="https://img.shields.io/github/languages/count/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-language-count">
-    <img src="https://codecov.io/github/mguyard/hass-iopool/graph/badge.svg?token=N2Y1LAEBGG" alt="codecov">
+    <a href="https://codecov.io/gh/mguyard/hass-iopool" >
+        <img src="https://codecov.io/gh/mguyard/hass-iopool/graph/badge.svg?token=N2Y1LAEBGG" alt="CodeCov"/>
+    </a>
 <p>
 <p align="center">
     <img src="https://img.shields.io/github/v/release/mguyard/hass-iopool?label=Stable" alt="Last Stable Release">
