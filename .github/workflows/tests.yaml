@@ -207,6 +207,10 @@ jobs:
                 echo "⏭️ Beta $BETA_VERSION already tested → SKIPPING"
                 echo "SKIP_TESTS=true" >> $GITHUB_ENV
                 echo "SKIP_REASON=Beta version $BETA_VERSION already tested" >> $GITHUB_ENV
+              elif ! compare_versions "$BETA_VERSION" "$STABLE_VERSION"; then
+                echo "⏭️ Beta ($BETA_VERSION) ≤ Stable ($STABLE_VERSION) → obsolete beta, SKIPPING"
+                echo "SKIP_TESTS=true" >> $GITHUB_ENV
+                echo "SKIP_REASON=Beta ($BETA_VERSION) is not newer than stable ($STABLE_VERSION)" >> $GITHUB_ENV
               else
                 echo "✅ New beta version ($BETA_VERSION) → Beta job WILL run"
                 HA_TO_INSTALL="$BETA_VERSION"
