@@ -405,12 +405,17 @@ jobs:
           PYEOF
 
           echo ""
-          echo "┌─────────────────────────────────────────────────────────────┐"
+          echo "┌──────────────────────────────────────────────────────────────────────┐"
           echo "│ Trigger: ${{ github.event_name }}"
-          echo "├─────────────────────────────────────────────────────────────┤"
+          echo "├──────────────────────────────────────────────────────────────────────┤"
           if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            if [[ "${{ inputs.ha_version }}" == "stable" ]]; then
+              OTHER_JOB="beta"
+            else
+              OTHER_JOB="stable"
+            fi
             echo "│ • ${{ inputs.ha_version }} job → ✅ EXECUTED"
-            echo "│ • other job     → ⏭️ SKIPPED (manual: only selected version runs)"
+            echo "│ • $OTHER_JOB job    → ⏭️ SKIPPED (manual: only selected version runs)"
           elif [[ "${{ github.event_name }}" == "schedule" ]]; then
             echo "│ • stable job → 🔄 CONDITIONAL (skipped if already tested)"
             echo "│ • beta job   → 🔄 CONDITIONAL (skipped if already tested)"
@@ -418,7 +423,7 @@ jobs:
             echo "│ • stable job → ✅ ALWAYS executed (regression testing)"
             echo "│ • beta job   → 🔄 CONDITIONAL (only if newer than stable)"
           fi
-          echo "└─────────────────────────────────────────────────────────────┘"
+          echo "└──────────────────────────────────────────────────────────────────────┘"
           echo ""
 
           if [[ "${{ needs.pyTest.result }}" == "success" ]]; then
