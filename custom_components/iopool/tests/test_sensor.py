@@ -344,6 +344,10 @@ class TestAsyncSetupEntryEdgeCases:
         call_kwargs = mock_sensor_class.call_args[1]
         from homeassistant.components.sensor import SensorStateClass
         assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
+        # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
+        from datetime import timedelta
+        hs_call_kwargs = mock_history_stats.call_args[1]
+        assert hs_call_kwargs.get("min_state_duration") == timedelta(0)
         assert mock_async_add_entities.call_count >= 1
 
     @pytest.mark.asyncio
@@ -425,6 +429,10 @@ class TestAsyncSetupEntryEdgeCases:
         call_kwargs = mock_sensor_class.call_args[1]
         from homeassistant.components.sensor import SensorStateClass
         assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
+        # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
+        from datetime import timedelta
+        hs_call_kwargs = mock_history_stats.call_args[1]
+        assert hs_call_kwargs.get("min_state_duration") == timedelta(0)
         assert mock_async_add_entities.call_count >= 1
 
     @pytest.mark.asyncio
