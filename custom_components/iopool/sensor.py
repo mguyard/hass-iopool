@@ -177,6 +177,7 @@ async def async_setup_entry(
                 name=friendly_name,
                 unique_id=f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
                 source_entity_id=f"sensor.iopool_{pool.title.lower().replace(' ', '_')}_{SENSOR_TEMPERATURE}",
+                state_class=SensorStateClass.MEASUREMENT,
             )
             history_stats_entity.entity_id = f"sensor.iopool_{pool.title.lower().replace(' ', '_')}_{SENSOR_ELAPSED_FILTRATION}"
             # Add the entity to Home Assistant

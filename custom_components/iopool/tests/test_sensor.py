@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 from custom_components.iopool.const import DOMAIN
 from custom_components.iopool.sensor import (
@@ -323,7 +323,7 @@ class TestAsyncSetupEntryEdgeCases:
         mock_history_stats.return_value = MagicMock()
 
         mock_history_coordinator = MagicMock()
-        mock_history_coordinator.async_config_entry_first_refresh = MagicMock(
+        mock_history_coordinator.async_config_entry_first_refresh = AsyncMock(
             return_value=None
         )
         mock_coordinator_class.return_value = mock_history_coordinator
@@ -339,8 +339,11 @@ class TestAsyncSetupEntryEdgeCases:
         mock_template.assert_called()
         mock_history_stats.assert_called_once()
         mock_coordinator_class.assert_called_once()
-        # Note: HistoryStatsSensor is called but within a try/except that might fail
-        # So we just verify that basic entities were added
+        # Verify HistoryStatsSensor was called with state_class=MEASUREMENT (required since HA 2026.3)
+        mock_sensor_class.assert_called_once()
+        call_kwargs = mock_sensor_class.call_args[1]
+        from homeassistant.components.sensor import SensorStateClass
+        assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
         assert mock_async_add_entities.call_count >= 1
 
     @pytest.mark.asyncio
@@ -400,7 +403,9 @@ class TestAsyncSetupEntryEdgeCases:
         mock_history_stats.return_value = MagicMock()
 
         mock_history_coordinator = MagicMock()
-        mock_history_coordinator.async_config_entry_first_refresh = MagicMock()
+        mock_history_coordinator.async_config_entry_first_refresh = AsyncMock(
+            return_value=None
+        )
         mock_coordinator_class.return_value = mock_history_coordinator
 
         mock_history_sensor = MagicMock()
@@ -411,11 +416,16 @@ class TestAsyncSetupEntryEdgeCases:
         await async_setup_entry(hass, config_entry, mock_async_add_entities)
 
         # Verify French language template was used
-        # This is indirectly tested by checking that the coordinator was created
         mock_coordinator_class.assert_called_once()
         call_args = mock_coordinator_class.call_args[0]
         friendly_name = call_args[3]  # 4th argument is friendly_name
         assert friendly_name == "Piscine Test Durée de filtration écoulée aujourd'hui"
+        # Verify HistoryStatsSensor was called with state_class=MEASUREMENT (required since HA 2026.3)
+        mock_sensor_class.assert_called_once()
+        call_kwargs = mock_sensor_class.call_args[1]
+        from homeassistant.components.sensor import SensorStateClass
+        assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
+        assert mock_async_add_entities.call_count >= 1
 
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.template.Template")
