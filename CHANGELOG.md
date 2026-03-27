@@ -1,3 +1,10 @@
+## [1.2.4-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.3...v1.2.4-beta.1) (2026-03-27)
+
+
+### Bug Fixes
+
+* **sensor:** 🐛 Add required `min_state_duration` to `HistoryStats` ([85883a0](https://github.com/mguyard/hass-iopool/commit/85883a0c8ba363c6638f712ab3f4b1a6e096eb32)), closes [#151643](https://github.com/mguyard/hass-iopool/issues/151643) [#53](https://github.com/mguyard/hass-iopool/issues/53)
+
 ## [1.2.3](https://github.com/mguyard/hass-iopool/compare/v1.2.2...v1.2.3) (2026-03-27)
 
 
