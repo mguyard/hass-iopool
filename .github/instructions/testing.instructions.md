@@ -7,15 +7,56 @@ applyTo: "custom_components/iopool/tests/**/*.py"
 
 ## Environment
 
-Tests **require** a Home Assistant dev container. Always set `PYTHONPATH`:
+Tests **require** a Home Assistant dev container. Before running tests, detect the execution environment automatically.
+
+### Step 1 — Detect if running inside the devcontainer
+
+Check for the presence of the `/workspaces` directory:
 
 ```bash
-# From /workspaces/home-assistant-dev/config
+test -d /workspaces && echo "inside devcontainer" || echo "outside devcontainer"
+```
+
+**If inside the devcontainer**, run pytest directly:
+
+```bash
+cd /workspaces/home-assistant-dev/config
 PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/
 
 # Or use the shortcut scripts (auto-configure PYTHONPATH)
 ./custom_components/iopool/tests/run_tests.sh
 ./custom_components/iopool/run_tests.sh
+```
+
+### Step 2 — If NOT inside the devcontainer
+
+List running Docker containers and present the result:
+
+```bash
+docker ps --format "table {{.ID}}\t{{.Image}}\t{{.Names}}"
+```
+
+- If containers are listed, identify the HA devcontainer and use its ID in Step 3.
+- If no container is running, inform the developer: *"No running container found. Please start the HA devcontainer first."*
+
+> ⚠️ The container ID changes every time the devcontainer is restarted. Always retrieve it fresh via `docker ps`.
+
+### Step 3 — Run tests via Docker exec
+
+```bash
+docker exec -w /workspaces/home-assistant-dev/config \
+  <CONTAINER_ID> \
+  bash -c "PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/ -v --tb=short"
+```
+
+Replace `<CONTAINER_ID>` with the value obtained from `docker ps`.
+
+To run with coverage:
+
+```bash
+docker exec -w /workspaces/home-assistant-dev/config \
+  <CONTAINER_ID> \
+  bash -c "PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/ --cov=. --cov-report=term-missing"
 ```
 
 > ⚠️ **Never create `pytest.ini`** — it breaks async test discovery. All pytest config lives in `pyproject.toml` (`asyncio_mode = "auto"`).
@@ -95,7 +136,4 @@ For each new entity, cover these scenarios:
 | `filtration.py` | 51% | improve |
 | All others | — | ≥ 70% |
 
-Run with coverage:
-```bash
-PYTHONPATH=/workspaces/home-assistant-dev python -m pytest custom_components/iopool/tests/ --cov=. --cov-report=term-missing
-```
+See the **Environment** section above for the appropriate coverage command depending on whether you are inside or outside the devcontainer.
