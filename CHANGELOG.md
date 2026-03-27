@@ -1,3 +1,10 @@
+## [1.2.3](https://github.com/mguyard/hass-iopool/compare/v1.2.2...v1.2.3) (2026-03-27)
+
+
+### Bug Fixes
+
+* **sensor:** 🐛 Add required `state_class` to `HistoryStatsSensor` ([b3a7b8c](https://github.com/mguyard/hass-iopool/commit/b3a7b8ccc9fe010ac296e88ddab657ddadaaaa14)), closes [home-assistant/core#148637](https://github.com/home-assistant/core/issues/148637) [#51](https://github.com/mguyard/hass-iopool/issues/51)
+
 ## [1.2.3-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.2...v1.2.3-beta.1) (2026-03-15)
 
 
