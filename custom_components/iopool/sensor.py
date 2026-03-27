@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 from typing import Any
 
@@ -158,6 +158,7 @@ async def async_setup_entry(
             start=start_template,
             end=end_template,
             duration=None,
+            min_state_duration=timedelta(0),
         )
         # Create the coordinator
         coordinator = HistoryStatsUpdateCoordinator(
