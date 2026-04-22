@@ -125,6 +125,79 @@ class TestFiltration:
         assert filtration.configuration_filtration_enabled_summer is True
         assert filtration.configuration_filtration_enabled_winter is True
         assert filtration.configuration_filtration_enabled is True
+        # Instance variables must start as None
+        assert filtration._next_stop_time is None
+        assert filtration._active_slot is None
+
+    def test_restore_filtration_state(self, filtration: Filtration) -> None:
+        """Test restore_filtration_state sets instance variables."""
+        filtration.restore_filtration_state("2026-03-28T04:00:00+01:00", "winter")
+        assert filtration._next_stop_time == "2026-03-28T04:00:00+01:00"
+        assert filtration._active_slot == "winter"
+
+    def test_restore_filtration_state_none(self, filtration: Filtration) -> None:
+        """Test restore_filtration_state accepts None values."""
+        filtration.restore_filtration_state(None, None)
+        assert filtration._next_stop_time is None
+        assert filtration._active_slot is None
+
+    def test_get_next_stop_time(self, filtration: Filtration) -> None:
+        """Test get_next_stop_time returns the instance variable."""
+        assert filtration.get_next_stop_time() is None
+        filtration._next_stop_time = "2026-03-28T04:00:00+01:00"
+        assert filtration.get_next_stop_time() == "2026-03-28T04:00:00+01:00"
+
+    def test_get_active_slot(self, filtration: Filtration) -> None:
+        """Test get_active_slot returns the instance variable."""
+        assert filtration.get_active_slot() is None
+        filtration._active_slot = "winter"
+        assert filtration.get_active_slot() == "winter"
+        filtration._active_slot = 2
+        assert filtration.get_active_slot() == 2
+
+    async def test_update_filtration_attributes_sets_instance_vars(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test that update_filtration_attributes updates instance variables."""
+        # Mock get_filtration_attributes to return a valid state
+        mock_state = MagicMock()
+        mock_state.state = "on"
+        mock_state.attributes = {}
+        with patch.object(
+            filtration,
+            "get_filtration_attributes",
+            return_value=("binary_sensor.iopool_filtration", mock_state, {}),
+        ):
+            await filtration.update_filtration_attributes(
+                next_stop_time="2026-03-28T04:00:00+01:00",
+                active_slot="winter",
+            )
+        assert filtration._next_stop_time == "2026-03-28T04:00:00+01:00"
+        assert filtration._active_slot == "winter"
+
+    async def test_update_filtration_attributes_clears_instance_vars(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test that update_filtration_attributes clears instance variables when None."""
+        filtration._next_stop_time = "2026-03-28T04:00:00+01:00"
+        filtration._active_slot = "winter"
+        mock_state = MagicMock()
+        mock_state.state = "on"
+        mock_state.attributes = {
+            "next_stop_time": "2026-03-28T04:00:00+01:00",
+            "active_slot": "winter",
+        }
+        with patch.object(
+            filtration,
+            "get_filtration_attributes",
+            return_value=("binary_sensor.iopool_filtration", mock_state, dict(mock_state.attributes)),
+        ):
+            await filtration.update_filtration_attributes(
+                next_stop_time=None,
+                active_slot=None,
+            )
+        assert filtration._next_stop_time is None
+        assert filtration._active_slot is None
 
     def test_config_filtration_summer_enabled_true(
         self, filtration: Filtration
