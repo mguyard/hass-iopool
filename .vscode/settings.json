@@ -11,5 +11,6 @@
     ],
     "flake8.args": [
         "--max-line-length=150"
-    ]
+    ],
+    "python.defaultInterpreterPath": "/usr/bin/python3"
 }
