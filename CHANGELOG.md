@@ -1,3 +1,12 @@
+## [1.2.4-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.1...v1.2.4-beta.2) (2026-04-22)
+
+
+### Bug Fixes
+
+* **config_flow:** 🐛 Fix optional number fields not rendering in HA 2026.4.x ([3645c13](https://github.com/mguyard/hass-iopool/commit/3645c13496568fe4c9e8068c1f430a8bdfc16b74)), closes [#62](https://github.com/mguyard/hass-iopool/issues/62)
+* **config_flow:** 🐛 Fix unreachable INVALID_AUTH error path ([dbc375d](https://github.com/mguyard/hass-iopool/commit/dbc375de3e43c6b653c1a567df4c66d2261d4924)), closes [#63](https://github.com/mguyard/hass-iopool/issues/63)
+* **filtration:** 🐛 Use instance vars as reliable source for stop scheduling ([04dd8d7](https://github.com/mguyard/hass-iopool/commit/04dd8d7af6e77906146b3caf6de2fab48476b18b))
+
 ## [1.2.4-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.3...v1.2.4-beta.1) (2026-03-27)
 
 
