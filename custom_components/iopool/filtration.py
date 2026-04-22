@@ -72,6 +72,12 @@ class Filtration:
             self.config_filtration_winter_enabled()
         )
         self.configuration_filtration_enabled = self.config_filtration_enabled()
+        # Instance variables for reliable operational state tracking.
+        # These are the source of truth for stop scheduling and survive
+        # coordinator failures, entity unavailability, and HA restarts
+        # (values are restored in IopoolBinarySensor.async_added_to_hass).
+        self._next_stop_time: str | None = None
+        self._active_slot: str | int | None = None
 
     def config_filtration_summer_enabled(self) -> bool:
         """Determine if summer filtration is enabled in the configuration.
@@ -516,11 +522,62 @@ class Filtration:
         if active_slot is None and "active_slot" in attributes:
             attributes.pop("active_slot")
 
+        # Update instance variables for reliable stop/start tracking.
+        # These survive coordinator failures and HA entity unavailability.
+        self._next_stop_time = next_stop_time
+        self._active_slot = active_slot
+
         # Update the state
         self._entry.runtime_data.coordinator.hass.states.async_set(
             entity_id, state.state, attributes
         )
         _LOGGER.debug("Updated filtration attributes: %s", attributes)
+
+    def restore_filtration_state(
+        self,
+        next_stop_time: str | None,
+        active_slot: str | int | None,
+    ) -> None:
+        """Restore filtration operational state after HA restart.
+
+        Called by IopoolBinarySensor.async_added_to_hass to populate instance
+        variables from the previously persisted HA state attributes, ensuring
+        the stop scheduler can resume correctly after a restart.
+
+        Args:
+            next_stop_time: ISO formatted datetime string for the next scheduled stop,
+                            or None if no stop was scheduled.
+            active_slot: The active filtration slot (1, 2, "winter", "boost") or None.
+
+        Returns:
+            None
+
+        """
+        self._next_stop_time = next_stop_time
+        self._active_slot = active_slot
+        _LOGGER.debug(
+            "Restored filtration operational state: next_stop_time=%s, active_slot=%s",
+            next_stop_time,
+            active_slot,
+        )
+
+    def get_next_stop_time(self) -> str | None:
+        """Return the current scheduled stop time for filtration.
+
+        Returns:
+            str | None: ISO formatted datetime string, or None if no stop is scheduled.
+
+        """
+        return self._next_stop_time
+
+    def get_active_slot(self) -> str | int | None:
+        """Return the currently active filtration slot.
+
+        Returns:
+            str | int | None: The active slot (1, 2, "winter", "boost") or None.
+
+        """
+        return self._active_slot
 
     async def check_filtration_status(self, now: datetime) -> None:
         """Periodically checks and manages the filtration system status.
@@ -585,6 +642,15 @@ class Filtration:
                 boost_state,
             )
 
+            # Retrieve the next scheduled stop time from instance variable.
+            # This is reliable: not affected by coordinator failures or entity
+            # unavailability, unlike reading from the HA state attributes.
+            next_stop_time = self._next_stop_time
+            _LOGGER.debug("Next stop time for filtration: %s", next_stop_time)
+            if not next_stop_time:
+                _LOGGER.debug("No next stop time set, skipping filtration stop check")
+                return
+
             _, _, filtration_attributes = await self.get_filtration_attributes()
 
             # if boost_state and boost_state.state not in (None, "none", "None"):
@@ -597,13 +663,6 @@ class Filtration:
             #             next_stop_time=None, active_slot="boost"
             #         )
             #     return
-
-            # Retrieve the next scheduled stop time from binary sensor attributes
-            next_stop_time = filtration_attributes.get("next_stop_time")
-            _LOGGER.debug("Next stop time for filtration: %s", next_stop_time)
-            if not next_stop_time:
-                _LOGGER.debug("No next stop time set, skipping filtration stop check")
-                return
 
             try:
                 # Parse the next_stop_time which is in local timezone
@@ -639,7 +698,7 @@ class Filtration:
 
                 if next_stop_dt and now_local >= next_stop_dt:
                     # Check if active_slot is 2 and if elapsed filtration is enough
-                    if filtration_attributes.get("active_slot", None) == 2:
+                    if self._active_slot == 2:
                         if elapsed_filtration_duration_state:
                             remaining_duration_min = round(
                                 int(
@@ -725,7 +784,7 @@ class Filtration:
                     # Prepare event data based on active slot
                     event_type = None
                     event = None
-                    match filtration_attributes.get("active_slot"):
+                    match self._active_slot:
                         case 1:
                             event_type = EVENT_TYPE_SLOT1_END
                             event = {
