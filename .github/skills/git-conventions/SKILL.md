@@ -75,6 +75,24 @@ Tests: ✅ 42 passed, ❌ 0 failed, ⚠️ 0 errors
 
 The pre-commit gate applies **only when `custom_components/` has changed** in the current commit.
 
+### 3.0 Branch Check (Step Zero — Always Required)
+
+Before any commit, verify the current branch:
+
+```bash
+git branch --show-current
+```
+
+- If the branch is `beta` or `main` → **stop immediately**. Switch to `dev` first:
+	```bash
+	git checkout dev
+	git pull origin dev
+	```
+	Then re-stage changes and continue.
+- If the branch is `dev` or a feature branch → proceed to §3.1.
+
+> **Never commit or push directly to `beta` or `main`.** These branches are managed exclusively by `semantic-release` CI. The VS Code context may report `Current branch: beta` — ignore this for commit targeting; always check with `git branch --show-current`.
+
 Before running, check whether the staged or changed files include `custom_components/`:
 ```bash
 git diff --name-only HEAD | grep -q "^custom_components/" && echo "tests required" || echo "tests not required"
@@ -132,6 +150,29 @@ Format:
 - `Tests: ✅ N passed, ❌ M failed, ⚠️ E errors` — when gate ran
 - `Tests: N/A (no custom_components change)` — when gate was skipped
 
+### 3.5 Issue Comment (When Issue is Referenced)
+
+If an issue number is provided in the user request (e.g., "fixes #42", "related to #17", or any explicit `#N` reference), you **must** post a comment on that issue **before creating the commit**.
+
+#### When to apply
+
+- The user's request mentions an issue number explicitly (`#N`)
+- The implementation directly fixes or addresses a known issue
+
+#### Comment content (in the language used by the issue — French if the issue is in French, English otherwise)
+
+The comment must include:
+1. **What was done** — summary of the change (files modified, logic applied)
+2. **Why** — root cause or motivation for the change
+3. **How** — approach taken (e.g., sentinel value, refactored logic, new test coverage)
+4. **Availability** — mention that the fix will be available in the next release
+
+#### How to post
+
+Use MCP GitHub tools: `mcp_github_add_issue_comment` on `mguyard/hass-iopool` with the issue number and the comment body.
+
+> This step is mandatory and must complete successfully before the commit is created. Do not skip it even if the commit message already references the issue with `Fixes #N`.
+
 ---
 
 ## 4. PR Conventions
@@ -177,7 +218,8 @@ Closes #<issue_number>
 | `beta` | Beta releases — merged only by `semantic-release` CI |
 | `main` | Stable releases — merged only by `semantic-release` CI |
 
-Never open a PR directly against `beta` or `main`.
+- Never open a PR directly against `beta` or `main`.
+- Never commit or push directly to `beta` or `main` — even if the VS Code session context reports `Current branch: beta`. Always verify with `git branch --show-current` (see §3.0).
 
 ### 4.4 Prepare PR Workflow
 
