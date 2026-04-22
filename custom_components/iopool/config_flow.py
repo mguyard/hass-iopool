@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from dataclasses import asdict, dataclass
+from datetime import timedelta
 from enum import Enum
 import logging
 from typing import Any
@@ -49,6 +50,11 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
         vol.Required(CONF_API_KEY): str,
     }
 )
+
+
+def _optional_number_selector_default(value: int | None) -> int:
+    """Return a frontend-safe default for optional number selectors."""
+    return 0 if value is None else value
 
 
 class ApiKeyValidationResult(str, Enum):
@@ -326,6 +332,8 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 options_returned.filtration.summer_filtration.min_duration = None
             if options_returned.filtration.summer_filtration.max_duration == 0:
                 options_returned.filtration.summer_filtration.max_duration = None
+            if options_returned.filtration.winter_filtration.duration == timedelta(0):
+                options_returned.filtration.winter_filtration.duration = None
 
             # Check if the options have changed
             if options == IopoolOptionsData.to_dict(options_returned):
@@ -454,9 +462,11 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 ): selector.BooleanSelector(),
                 vol.Optional(
                     f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MIN_DURATION}",
-                    default=options[CONF_OPTIONS_FILTRATION][
-                        CONF_OPTIONS_FILTRATION_SUMMER
-                    ][CONF_OPTIONS_FILTRATION_MIN_DURATION],
+                    default=_optional_number_selector_default(
+                        options[CONF_OPTIONS_FILTRATION][
+                            CONF_OPTIONS_FILTRATION_SUMMER
+                        ][CONF_OPTIONS_FILTRATION_MIN_DURATION]
+                    ),
                 ): vol.Maybe(
                     selector.NumberSelector(
                         selector.NumberSelectorConfig(
@@ -469,9 +479,11 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 ),
                 vol.Optional(
                     f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MAX_DURATION}",
-                    default=options[CONF_OPTIONS_FILTRATION][
-                        CONF_OPTIONS_FILTRATION_SUMMER
-                    ][CONF_OPTIONS_FILTRATION_MAX_DURATION],
+                    default=_optional_number_selector_default(
+                        options[CONF_OPTIONS_FILTRATION][
+                            CONF_OPTIONS_FILTRATION_SUMMER
+                        ][CONF_OPTIONS_FILTRATION_MAX_DURATION]
+                    ),
                 ): vol.Maybe(
                     selector.NumberSelector(
                         selector.NumberSelectorConfig(
@@ -539,13 +551,15 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 ): vol.Maybe(selector.TimeSelector()),
                 vol.Optional(
                     f"{CONF_OPTIONS_FILTRATION_WINTER}.{CONF_OPTIONS_FILTRATION_DURATION}",
-                    default=options[CONF_OPTIONS_FILTRATION][
-                        CONF_OPTIONS_FILTRATION_WINTER
-                    ][CONF_OPTIONS_FILTRATION_DURATION],
+                    default=_optional_number_selector_default(
+                        options[CONF_OPTIONS_FILTRATION][
+                            CONF_OPTIONS_FILTRATION_WINTER
+                        ][CONF_OPTIONS_FILTRATION_DURATION]
+                    ),
                 ): vol.Maybe(
                     selector.NumberSelector(
                         selector.NumberSelectorConfig(
-                            min=1,
+                            min=0,
                             max=1439,
                             step=1,
                             mode="slider",
