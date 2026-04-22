@@ -55,14 +55,27 @@ class TestGetIopoolData:
         assert len(result.result_data.pools) == 1
         assert result.result_data.pools[0].id == TEST_POOL_ID
 
+    @pytest.mark.parametrize(
+        ("status", "message"),
+        [
+            (401, "Unauthorized"),
+            (403, "Forbidden"),
+        ],
+    )
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_invalid_auth(
-        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
+        self,
+        mock_session_func,
+        hass: HomeAssistant,
+        mock_aiohttp_session,
+        status: int,
+        message: str,
     ) -> None:
-        """Test API data retrieval with invalid auth."""
-        # Override the status to return 401
-        mock_aiohttp_session.get.return_value.__aenter__.return_value.status = 401
+        """Test API data retrieval with invalid auth (401/403 must not reach ClientError handler)."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
+        response_mock.status = status
+        # raise_for_status is NOT called in the fixed code — status is checked explicitly
         mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, "invalid_key")
@@ -89,14 +102,12 @@ class TestGetIopoolData:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_server_error(
-        self, mock_session_func, hass: HomeAssistant
+        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
-        """Test API data retrieval with server error."""
-        session = AsyncMock()
-        response_mock = AsyncMock()
+        """Test API data retrieval with unexpected server error (5xx → CANNOT_CONNECT)."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         response_mock.status = 500
-        session.get.return_value.__aenter__.return_value = response_mock
-        mock_session_func.return_value = session
+        mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
 
@@ -106,15 +117,13 @@ class TestGetIopoolData:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_json_error(
-        self, mock_session_func, hass: HomeAssistant
+        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
         """Test API data retrieval with JSON parsing error."""
-        session = AsyncMock()
-        response_mock = AsyncMock()
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         response_mock.status = 200
         response_mock.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
-        session.get.return_value.__aenter__.return_value = response_mock
-        mock_session_func.return_value = session
+        mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
 
@@ -127,8 +136,9 @@ class TestGetIopoolData:
         self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
         """Test API data retrieval with no pools."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         # Override to return empty pools list
-        mock_aiohttp_session.get.return_value.__aenter__.return_value.json.return_value = []
+        response_mock.json.return_value = []
         mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
@@ -579,7 +589,7 @@ class TestIopoolOptionsFlow:
     async def test_get_iopool_data_client_error(self, hass: HomeAssistant) -> None:
         """Test get_iopool_data with ClientError."""
         with patch(
-            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+            "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_session.return_value.get.side_effect = ClientError("Network error")
 
@@ -589,13 +599,12 @@ class TestIopoolOptionsFlow:
 
     @pytest.mark.asyncio
     async def test_get_iopool_data_server_error(self, hass: HomeAssistant) -> None:
-        """Test get_iopool_data with server error (5xx)."""
+        """Test get_iopool_data with server error (5xx → CANNOT_CONNECT)."""
         with patch(
             "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 500
-            mock_response.raise_for_status.side_effect = Exception("Server error")
             mock_session.return_value.get.return_value.__aenter__.return_value = (
                 mock_response
             )
@@ -606,13 +615,12 @@ class TestIopoolOptionsFlow:
 
     @pytest.mark.asyncio
     async def test_get_iopool_data_other_http_error(self, hass: HomeAssistant) -> None:
-        """Test get_iopool_data with other HTTP error (e.g., 404)."""
+        """Test get_iopool_data with other HTTP error (e.g., 404 → CANNOT_CONNECT)."""
         with patch(
             "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 404
-            mock_response.raise_for_status.return_value = None
             mock_session.return_value.get.return_value.__aenter__.return_value = (
                 mock_response
             )
