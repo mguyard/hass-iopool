@@ -6,7 +6,7 @@ model: Claude Sonnet 4.6 (copilot)
 target: vscode
 user-invocable: true
 disable-model-invocation: true
-tools: [read/readFile, agent, vscode/memory]
+tools: [agent, vscode/memory, vscode/askQuestions, read/readFile]
 agents:
   [
     Planner,

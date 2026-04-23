@@ -47,6 +47,7 @@ If delegated to work in a **git worktree** (Orchestrator will specify the worktr
 2. If edit/write tools are unavailable, stop immediately and return exactly: `EDIT_TOOLS_UNAVAILABLE`.
 3. Do NOT output full-file replacements or multi-file code dumps as a fallback.
 4. Wait for Orchestrator to re-run delegation in write-capable mode.
+5. **GitHub interactions**: `gh` CLI is NOT installed. Use MCP GitHub tools exclusively (see `@skills/git-conventions/SKILL.md §0`). Never fall back to `gh` commands.
 
 ## Tool Preflight (When Requested)
 
