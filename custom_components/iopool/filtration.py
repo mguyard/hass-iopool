@@ -786,23 +786,13 @@ class Filtration:
                     event = None
                     match self._active_slot:
                         case 1:
+                            slot1_start_str = filtration_attributes.get("slot1_start_time")
+                            slot1_start_dt = dt_util.parse_datetime(slot1_start_str) if slot1_start_str else None
                             event_type = EVENT_TYPE_SLOT1_END
                             event = {
-                                "start_time": dt_util.parse_datetime(
-                                    filtration_attributes.get("slot1_start_time", None)
-                                ),
+                                "start_time": slot1_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int(
-                                    (
-                                        now
-                                        - dt_util.parse_datetime(
-                                            filtration_attributes.get(
-                                                "slot1_start_time", None
-                                            )
-                                        )
-                                    ).total_seconds()
-                                    / 60
-                                ),
+                                "duration_minutes": int((now - slot1_start_dt).total_seconds() / 60) if slot1_start_dt else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,
@@ -810,23 +800,13 @@ class Filtration:
                                 "day_filtration_elapsed_percent": day_filtration_elapsed_percent,
                             }
                         case 2:
+                            slot2_start_str = filtration_attributes.get("slot2_start_time")
+                            slot2_start_dt = dt_util.parse_datetime(slot2_start_str) if slot2_start_str else None
                             event_type = EVENT_TYPE_SLOT2_END
                             event = {
-                                "start_time": dt_util.parse_datetime(
-                                    filtration_attributes.get("slot2_start_time", None)
-                                ),
+                                "start_time": slot2_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int(
-                                    (
-                                        now
-                                        - dt_util.parse_datetime(
-                                            filtration_attributes.get(
-                                                "slot2_start_time", None
-                                            )
-                                        )
-                                    ).total_seconds()
-                                    / 60
-                                ),
+                                "duration_minutes": int((now - slot2_start_dt).total_seconds() / 60) if slot2_start_dt else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,
@@ -834,23 +814,13 @@ class Filtration:
                                 "day_filtration_elapsed_percent": day_filtration_elapsed_percent,
                             }
                         case "winter":
+                            winter_start_str = filtration_attributes.get("winter_filtration_start")
+                            winter_start_dt = dt_util.parse_datetime(winter_start_str) if winter_start_str else None
                             event_type = EVENT_TYPE_WINTER_END
                             event = {
-                                "start_time": dt_util.parse_datetime(
-                                    filtration_attributes.get("winter_start_time", None)
-                                ),
+                                "start_time": winter_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int(
-                                    (
-                                        now
-                                        - dt_util.parse_datetime(
-                                            filtration_attributes.get(
-                                                "winter_start_time", None
-                                            )
-                                        )
-                                    ).total_seconds()
-                                    / 60
-                                ),
+                                "duration_minutes": int((now - winter_start_dt).total_seconds() / 60) if winter_start_dt else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,

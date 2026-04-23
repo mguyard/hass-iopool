@@ -17,6 +17,8 @@ from custom_components.iopool.const import (
     CONF_OPTIONS_FILTRATION_SWITCH_ENTITY,
     CONF_OPTIONS_FILTRATION_WINTER,
     DOMAIN,
+    EVENT_TYPE_SLOT1_END,
+    EVENT_TYPE_WINTER_END,
 )
 from custom_components.iopool.filtration import Filtration
 from custom_components.iopool.models import IopoolConfigData, IopoolConfigEntry
@@ -730,3 +732,230 @@ class TestFiltration:
         # Test through public interface - when no state, get_switch_entity still works
         result = filtration.get_switch_entity()
         assert result == "switch.pool_pump"
+
+    # ---------------------------------------------------------------------------
+    # check_filtration_status — event payload correctness and None-guard tests
+    # ---------------------------------------------------------------------------
+
+    def _make_check_filtration_mocks(self, now_dt):
+        """Return (switch_state, boost_mock, mock_search, mock_get) helpers for check_filtration_status tests."""
+        switch_state = MagicMock()
+        switch_state.state = "on"
+        boost_mock = MagicMock()
+        boost_mock.state = "none"
+        boost_mock.attributes = {}
+
+        def mock_search(platform, pattern):
+            if "boost" in pattern:
+                return "select.boost_selector"
+            return None
+
+        def mock_get(eid):
+            if eid == "switch.pool_pump":
+                return switch_state
+            if eid == "select.boost_selector":
+                return boost_mock
+            return None
+
+        return switch_state, boost_mock, mock_search, mock_get
+
+    async def test_check_filtration_status_slot1_end_event_fired(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test that slot1 end event is fired with correct duration_minutes."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        start_dt = now - timedelta(minutes=90)
+        start_str = start_dt.isoformat()
+
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "slot1_start_time": start_str,
+            "filtration_duration_minutes": 120,
+        }
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        call_args = mock_publish.call_args
+        assert call_args[0][0] == EVENT_TYPE_SLOT1_END
+        event_payload = call_args[0][1]
+        assert event_payload["duration_minutes"] == 90
+        assert event_payload["start_time"] == dt_util.parse_datetime(start_str)
+
+    async def test_check_filtration_status_slot1_end_none_start_time(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test slot1 end event with missing slot1_start_time — no TypeError, duration_minutes=0."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            # slot1_start_time deliberately absent
+            "filtration_duration_minutes": 120,
+        }
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            # Must not raise TypeError
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["duration_minutes"] == 0
+        assert event_payload["start_time"] is None
+
+    async def test_check_filtration_status_slot2_end_none_start_time(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test slot2 end event with missing slot2_start_time — no TypeError, duration_minutes=0."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            # slot2_start_time deliberately absent
+            "filtration_duration_minutes": 120,
+        }
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["duration_minutes"] == 0
+        assert event_payload["start_time"] is None
+
+    async def test_check_filtration_status_winter_end_event_correct_key(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test that winter end event reads 'winter_filtration_start' (not 'winter_start_time')."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        start_dt = now - timedelta(minutes=60)
+        start_str = start_dt.isoformat()
+        filtration._active_slot = "winter"
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "winter_filtration_start": start_str,   # correct key
+            # "winter_start_time" is intentionally absent to confirm only the right key is read
+        }
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        call_args = mock_publish.call_args
+        assert call_args[0][0] == EVENT_TYPE_WINTER_END
+        event_payload = call_args[0][1]
+        assert event_payload["duration_minutes"] == 60
+        assert event_payload["start_time"] == dt_util.parse_datetime(start_str)
+
+    async def test_check_filtration_status_winter_end_old_wrong_key_ignored(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test winter end event: old 'winter_start_time' key is ignored; duration_minutes=0."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        start_dt = now - timedelta(minutes=45)
+        filtration._active_slot = "winter"
+        filtration._next_stop_time = now.isoformat()
+        # Only the OLD wrong key present — should not be read
+        filtration_attrs = {
+            "winter_start_time": start_dt.isoformat(),   # old wrong key
+        }
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            # Must not raise TypeError even when correct key is absent
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["duration_minutes"] == 0
+        assert event_payload["start_time"] is None
+
+    async def test_check_filtration_status_winter_end_none_start_time(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """Test winter end with winter_filtration_start=None — no TypeError, duration_minutes=0."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = "winter"
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {}   # no winter_filtration_start at all
+        _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), filtration_attrs
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["duration_minutes"] == 0
+        assert event_payload["start_time"] is None
