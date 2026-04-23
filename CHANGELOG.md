@@ -1,3 +1,10 @@
+## [1.2.4-beta.3](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.2...v1.2.4-beta.3) (2026-04-23)
+
+
+### Bug Fixes
+
+* **filtration:** 🐛 Fix winter end event not fired due to wrong attr key ([757112a](https://github.com/mguyard/hass-iopool/commit/757112afaf7a20c6b61cab156be71eca55db483e)), closes [#65](https://github.com/mguyard/hass-iopool/issues/65)
+
 ## [1.2.4-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.1...v1.2.4-beta.2) (2026-04-22)
 
 
