@@ -10,6 +10,26 @@ Use this skill for any commit, PR creation, or pre-commit verification task in t
 
 ---
 
+## 0. GitHub Tooling (Mandatory)
+
+> **`gh` CLI is NOT installed and must NEVER be used.**
+
+All GitHub interactions (creating issues, posting comments, creating/updating PRs, reading PR diffs, searching issues, etc.) **must use MCP GitHub tools exclusively**:
+
+| Operation | MCP tool to use |
+|-----------|----------------|
+| Create issue | `mcp_github_create_issue` |
+| Add issue comment | `mcp_github_add_issue_comment` |
+| Update issue comment | `mcp_github_update_issue_comment` |
+| Create PR | `mcp_github_create_pull_request` |
+| Get PR diff | `mcp_github_get_pull_request_diff` |
+| Search issues/PRs | `mcp_github_search_issues` |
+| Get file contents | `mcp_github_get_file_contents` |
+
+If a MCP GitHub tool is unavailable for a specific operation, stop and report the gap to the Orchestrator. Do **not** fall back to `gh` CLI commands.
+
+---
+
 ## 1. Commit Message Format
 
 ```
