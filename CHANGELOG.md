@@ -1,3 +1,10 @@
+## [1.2.4-beta.4](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.3...v1.2.4-beta.4) (2026-04-24)
+
+
+### Bug Fixes
+
+* **entity:** 🐛 Normalize pool name slugs to valid entity IDs ([5ab35e8](https://github.com/mguyard/hass-iopool/commit/5ab35e8bf1d8fbf809fffda15c961810c6075ed0)), closes [#67](https://github.com/mguyard/hass-iopool/issues/67)
+
 ## [1.2.4-beta.3](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.2...v1.2.4-beta.3) (2026-04-23)
 
 
