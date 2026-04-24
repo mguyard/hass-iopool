@@ -24,7 +24,7 @@ from .const import (
     SENSOR_POOL_MODE,
 )
 from .coordinator import IopoolDataUpdateCoordinator
-from .entity import IopoolEntity
+from .entity import IopoolEntity, slugify_pool_name
 from .filtration import Filtration
 from .models import IopoolConfigData, IopoolConfigEntry
 
@@ -120,7 +120,7 @@ class IopoolSelect(IopoolEntity, SelectEntity):
         self._attr_unique_id = f"{config_entry_id}_{pool_id}_{description.key}"
 
         # Set custom entity_id with iopool_ prefix
-        snake_pool_name = pool_name.lower().replace(" ", "_")
+        snake_pool_name = slugify_pool_name(pool_name)
         self.entity_id = f"select.iopool_{snake_pool_name}_{description.key}"
 
     @property

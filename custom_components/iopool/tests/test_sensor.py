@@ -147,6 +147,30 @@ class TestIopoolSensor:
         # Test that sensor was created with correct parameters
         assert sensor.unique_id is not None
 
+    @pytest.mark.parametrize(
+        ("pool_name", "expected_id_fragment"),
+        [
+            ("My Pool", "my_pool"),
+            ("Piscine été", "piscine_ete"),
+            ("aquarium à  pikatchu", "aquarium_a_pikatchu"),
+            ("Pool-Name", "pool_name"),
+            ("  Leading Spaces  ", "leading_spaces"),
+        ],
+    )
+    def test_sensor_entity_id_slugified(self, pool_name: str, expected_id_fragment: str) -> None:
+        """Test that sensor entity_id is properly slugified from the pool name."""
+        mock_coordinator = MagicMock()
+        sensor_description = POOL_SENSORS[0]  # Temperature sensor
+        sensor = IopoolSensor(
+            mock_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            pool_name,
+        )
+        expected_entity_id = f"sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        assert sensor.entity_id == expected_entity_id
+
     def test_temperature_sensor_properties(self) -> None:
         """Test temperature sensor specific properties."""
         mock_coordinator = MagicMock()

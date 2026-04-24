@@ -35,6 +35,7 @@ from .const import (
     SENSOR_FILTRATION,
 )
 from .coordinator import IopoolDataUpdateCoordinator
+from .entity import slugify_pool_name
 from .filtration import Filtration
 from .models import IopoolConfigData
 
@@ -133,7 +134,7 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
         self._filtration: Filtration = coordinator.config_entry.runtime_data.filtration
 
         # Convert pool_name to snake_case for consistency
-        snake_pool_name = pool_name.lower().replace(" ", "_")
+        snake_pool_name = slugify_pool_name(pool_name)
         self.entity_id = f"binary_sensor.iopool_{snake_pool_name}_{description.key}"
 
         # Create a unique DeviceInfo for each pool - must match the sensor platform
