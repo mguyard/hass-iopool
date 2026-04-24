@@ -32,7 +32,7 @@ from .const import (
     SENSOR_TEMPERATURE,
 )
 from .coordinator import IopoolDataUpdateCoordinator
-from .entity import IopoolEntity
+from .entity import IopoolEntity, slugify_pool_name
 from .models import IopoolConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
@@ -177,10 +177,10 @@ async def async_setup_entry(
                 sensor_type=CONF_TYPE_TIME,
                 name=friendly_name,
                 unique_id=f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
-                source_entity_id=f"sensor.iopool_{pool.title.lower().replace(' ', '_')}_{SENSOR_TEMPERATURE}",
+                source_entity_id=f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_TEMPERATURE}",
                 state_class=SensorStateClass.MEASUREMENT,
             )
-            history_stats_entity.entity_id = f"sensor.iopool_{pool.title.lower().replace(' ', '_')}_{SENSOR_ELAPSED_FILTRATION}"
+            history_stats_entity.entity_id = f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_ELAPSED_FILTRATION}"
             # Add the entity to Home Assistant
             async_add_entities([history_stats_entity])
         except (ValueError, KeyError, TypeError) as err:
@@ -206,7 +206,7 @@ class IopoolSensor(IopoolEntity, SensorEntity):
         self._attr_unique_id = f"{config_entry_id}_{pool_id}_{description.key}"
 
         # Set custom entity_id with iopool_ prefix
-        snake_pool_name = pool_name.lower().replace(" ", "_")
+        snake_pool_name = slugify_pool_name(pool_name)
         self.entity_id = f"sensor.iopool_{snake_pool_name}_{description.key}"
 
     @property

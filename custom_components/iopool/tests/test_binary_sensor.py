@@ -163,6 +163,34 @@ class TestIopoolBinarySensor:
         assert sensor.has_entity_name is True
         assert sensor.translation_key == sensor_description.translation_key
 
+    @pytest.mark.parametrize(
+        ("pool_name", "expected_id_fragment"),
+        [
+            ("My Pool", "my_pool"),
+            ("Piscine été", "piscine_ete"),
+            ("aquarium à  pikatchu", "aquarium_a_pikatchu"),
+            ("Pool-Name", "pool_name"),
+            ("  Leading Spaces  ", "leading_spaces"),
+        ],
+    )
+    def test_binary_sensor_entity_id_slugified(
+        self,
+        mock_iopool_coordinator,
+        pool_name: str,
+        expected_id_fragment: str,
+    ) -> None:
+        """Test that binary sensor entity_id is properly slugified from the pool name."""
+        sensor_description = POOL_BINARY_SENSORS[0]  # action_required
+        sensor = IopoolBinarySensor(
+            mock_iopool_coordinator,
+            sensor_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            pool_name,
+        )
+        expected_entity_id = f"binary_sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        assert sensor.entity_id == expected_entity_id
+
     def test_action_required_sensor_properties(
         self,
         mock_iopool_coordinator,
