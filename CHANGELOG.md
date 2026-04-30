@@ -1,3 +1,15 @@
+## [1.2.4](https://github.com/mguyard/hass-iopool/compare/v1.2.3...v1.2.4) (2026-04-30)
+
+
+### Bug Fixes
+
+* **config_flow:** 🐛 Fix optional number fields not rendering in HA 2026.4.x ([3645c13](https://github.com/mguyard/hass-iopool/commit/3645c13496568fe4c9e8068c1f430a8bdfc16b74)), closes [#62](https://github.com/mguyard/hass-iopool/issues/62)
+* **config_flow:** 🐛 Fix unreachable INVALID_AUTH error path ([dbc375d](https://github.com/mguyard/hass-iopool/commit/dbc375de3e43c6b653c1a567df4c66d2261d4924)), closes [#63](https://github.com/mguyard/hass-iopool/issues/63)
+* **entity:** 🐛 Normalize pool name slugs to valid entity IDs ([5ab35e8](https://github.com/mguyard/hass-iopool/commit/5ab35e8bf1d8fbf809fffda15c961810c6075ed0)), closes [#67](https://github.com/mguyard/hass-iopool/issues/67)
+* **filtration:** 🐛 Fix winter end event not fired due to wrong attr key ([757112a](https://github.com/mguyard/hass-iopool/commit/757112afaf7a20c6b61cab156be71eca55db483e)), closes [#65](https://github.com/mguyard/hass-iopool/issues/65)
+* **filtration:** 🐛 Use instance vars as reliable source for stop scheduling ([04dd8d7](https://github.com/mguyard/hass-iopool/commit/04dd8d7af6e77906146b3caf6de2fab48476b18b))
+* **sensor:** 🐛 Add required `min_state_duration` to `HistoryStats` ([85883a0](https://github.com/mguyard/hass-iopool/commit/85883a0c8ba363c6638f712ab3f4b1a6e096eb32)), closes [#151643](https://github.com/mguyard/hass-iopool/issues/151643) [#53](https://github.com/mguyard/hass-iopool/issues/53)
+
 ## [1.2.4-beta.4](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.3...v1.2.4-beta.4) (2026-04-24)
 
 
