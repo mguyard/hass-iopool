@@ -16,7 +16,7 @@ Guidelines:
    - `docs`: 📝 (memo) — For documentation changes (including anything in `docs/` or `docs.json`)
    - `refactor`: ♻️ (recycle) — For code refactoring that does not add features or fix bugs
    - `test`: ✅ (white check mark) — For adding or updating tests
-   - `chore`: c (wrench) — For maintenance, build, or tooling changes
+   - `chore`: 🔧 (wrench) — For maintenance, build, or tooling changes
 
 3. **Description**: Write a concise, informative description in the header; use backticks if referencing code or specific terms.
 
@@ -24,35 +24,36 @@ Guidelines:
    - Use bullet points (`*`) for clarity.
    - Clearly describe the motivation, context, or technical details behind the change, if applicable.
 
+
 **Examples:**
 
 ```
-feat(api): ✨ Add support for multiple pools
+feat(alarm_control_panel): ✨ Add support for partial arming mode
 
-* Implements multi-pool detection and entity creation.
-* Updates API client to handle multiple pool IDs.
-```
-
-```
-docs(setup): 📝 Update installation instructions in docs/setup.mdx
-
-* Clarifies API key retrieval steps.
+* Implements `partial` mode support for iopool pool.
+* Updates UI to reflect new mode.
 ```
 
 ```
-fix(sensor): 🐛 Correct temperature rounding logic
+docs(readme): 📝 Update README with troubleshooting section
+
+* Adds common issues and solutions for iopool integration.
 ```
 
 ```
-refactor(core): ♻️ Simplify DataUpdateCoordinator usage
+fix(sensor): 🐛 Fix humidity sensor value conversion
 ```
 
 ```
-test(sensor): ✅ Add tests for ORP sensor edge cases
+refactor(coordinator): ♻️ Refactor update logic for better reliability
 ```
 
 ```
-chore(deps): 🔧 Update Home Assistant minimum version requirement
+test(alarm_control_panel): ✅ Add tests for alarm state transitions
+```
+
+```
+chore(deps): 🔧 Bump minimum Home Assistant version to 2024.6.0
 ```
 
 **Rules:**

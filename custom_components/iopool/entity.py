@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import re
+import unicodedata
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -9,6 +12,20 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from .api_models import IopoolAPIResponsePool
 from .const import DOMAIN, MANUFACTURER
 from .coordinator import IopoolDataUpdateCoordinator
+
+
+def slugify_pool_name(name: str) -> str:
+    """Convert a pool name to a valid entity ID slug.
+
+    Normalizes accented characters, lowercases, and replaces any sequence
+    of non-alphanumeric characters with a single underscore.
+    """
+    # Normalize accented characters via NFKD: à→a, é→e, ç→c, etc.
+    nfkd = unicodedata.normalize("NFKD", name)
+    ascii_name = nfkd.encode("ascii", "ignore").decode("ascii")
+    # Replace any sequence of non [a-z0-9] chars with a single underscore
+    slugged = re.sub(r"[^a-z0-9]+", "_", ascii_name.lower())
+    return slugged.strip("_")
 
 
 class IopoolEntity(CoordinatorEntity, RestoreEntity):

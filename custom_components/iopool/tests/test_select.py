@@ -77,6 +77,36 @@ class TestIopoolSelect:
 
         assert select_entity.icon == select_description.icon
 
+    @pytest.mark.parametrize(
+        ("pool_name", "expected_id_fragment"),
+        [
+            ("My Pool", "my_pool"),
+            ("Piscine été", "piscine_ete"),
+            ("aquarium à  pikatchu", "aquarium_a_pikatchu"),
+            ("Pool-Name", "pool_name"),
+            ("  Leading Spaces  ", "leading_spaces"),
+        ],
+    )
+    def test_select_entity_id_slugified(
+        self,
+        mock_iopool_coordinator,
+        pool_name: str,
+        expected_id_fragment: str,
+    ) -> None:
+        """Test that select entity_id is properly slugified from the pool name."""
+        select_description = POOL_SELECTS_CONDITIONAL_FILTRATION[0]  # boost_selector
+        filtration_mock = MagicMock()
+        select_entity = IopoolSelect(
+            mock_iopool_coordinator,
+            filtration_mock,
+            select_description,
+            "test_entry_id",
+            TEST_POOL_ID,
+            pool_name,
+        )
+        expected_entity_id = f"select.iopool_{expected_id_fragment}_{select_description.key}"
+        assert select_entity.entity_id == expected_entity_id
+
 
 class TestIopoolSelectAdvanced:
     """Test advanced functionality."""

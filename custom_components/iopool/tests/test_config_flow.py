@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 from unittest.mock import AsyncMock, patch
 
 from aiohttp.client_exceptions import ClientError
@@ -10,15 +11,28 @@ from custom_components.iopool.config_flow import (
     ApiKeyValidationResult,
     IopoolConfigFlow,
     IopoolOptionsFlow,
+    _optional_number_selector_default,
     get_iopool_data,
 )
-from custom_components.iopool.const import CONF_POOL_ID, DOMAIN
+from custom_components.iopool.const import (
+    CONF_OPTIONS_FILTRATION,
+    CONF_OPTIONS_FILTRATION_DURATION,
+    CONF_OPTIONS_FILTRATION_MAX_DURATION,
+    CONF_OPTIONS_FILTRATION_MIN_DURATION,
+    CONF_OPTIONS_FILTRATION_SUMMER,
+    CONF_OPTIONS_FILTRATION_WINTER,
+    CONF_POOL_ID,
+    DOMAIN,
+)
+from custom_components.iopool.models import IopoolOptionsData
 import pytest
+import voluptuous_serialize
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import config_validation as cv
 
 from .conftest import TEST_API_KEY, TEST_POOL_ID, TEST_POOL_TITLE
 
@@ -41,14 +55,27 @@ class TestGetIopoolData:
         assert len(result.result_data.pools) == 1
         assert result.result_data.pools[0].id == TEST_POOL_ID
 
+    @pytest.mark.parametrize(
+        ("status", "message"),
+        [
+            (401, "Unauthorized"),
+            (403, "Forbidden"),
+        ],
+    )
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_invalid_auth(
-        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
+        self,
+        mock_session_func,
+        hass: HomeAssistant,
+        mock_aiohttp_session,
+        status: int,
+        message: str,
     ) -> None:
-        """Test API data retrieval with invalid auth."""
-        # Override the status to return 401
-        mock_aiohttp_session.get.return_value.__aenter__.return_value.status = 401
+        """Test API data retrieval with invalid auth (401/403 must not reach ClientError handler)."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
+        response_mock.status = status
+        # raise_for_status is NOT called in the fixed code — status is checked explicitly
         mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, "invalid_key")
@@ -75,14 +102,12 @@ class TestGetIopoolData:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_server_error(
-        self, mock_session_func, hass: HomeAssistant
+        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
-        """Test API data retrieval with server error."""
-        session = AsyncMock()
-        response_mock = AsyncMock()
+        """Test API data retrieval with unexpected server error (5xx → CANNOT_CONNECT)."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         response_mock.status = 500
-        session.get.return_value.__aenter__.return_value = response_mock
-        mock_session_func.return_value = session
+        mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
 
@@ -92,15 +117,13 @@ class TestGetIopoolData:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.config_flow.async_get_clientsession")
     async def test_get_iopool_data_json_error(
-        self, mock_session_func, hass: HomeAssistant
+        self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
         """Test API data retrieval with JSON parsing error."""
-        session = AsyncMock()
-        response_mock = AsyncMock()
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         response_mock.status = 200
         response_mock.json = AsyncMock(side_effect=ValueError("Invalid JSON"))
-        session.get.return_value.__aenter__.return_value = response_mock
-        mock_session_func.return_value = session
+        mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
 
@@ -113,8 +136,9 @@ class TestGetIopoolData:
         self, mock_session_func, hass: HomeAssistant, mock_aiohttp_session
     ) -> None:
         """Test API data retrieval with no pools."""
+        response_mock = mock_aiohttp_session.get.return_value.__aenter__.return_value
         # Override to return empty pools list
-        mock_aiohttp_session.get.return_value.__aenter__.return_value.json.return_value = []
+        response_mock.json.return_value = []
         mock_session_func.return_value = mock_aiohttp_session
 
         result = await get_iopool_data(hass, TEST_API_KEY)
@@ -344,6 +368,28 @@ class TestConfigFlow:
 class TestIopoolOptionsFlow:
     """Test IopoolOptionsFlow class."""
 
+    @staticmethod
+    def _serialize_options_form(result: dict) -> dict[str, dict]:
+        """Serialize the options form and index filtration fields by name."""
+        serialized_schema = voluptuous_serialize.convert(
+            result["data_schema"], custom_serializer=cv.custom_serializer
+        )
+        filtration_section = next(
+            field for field in serialized_schema if field["name"] == "filtration"
+        )
+        return {
+            field["name"]: field for field in filtration_section["schema"]
+        }
+
+    @staticmethod
+    def _set_flow_config_entry(flow: IopoolOptionsFlow, options: dict) -> None:
+        """Attach a config entry to an options flow instance."""
+        flow.hass = AsyncMock()
+        flow.hass.config_entries.async_get_known_entry = lambda _: AsyncMock(
+            options=options
+        )
+        flow.handler = "test-entry-id"
+
     @pytest.mark.asyncio
     async def test_choose_pool_no_pools_available(self, hass: HomeAssistant) -> None:
         """Test choose_pool step when no pools are available."""
@@ -354,6 +400,147 @@ class TestIopoolOptionsFlow:
         result = await flow.async_step_choose_pool()
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "no_pools"
+
+    @pytest.mark.asyncio
+    async def test_options_flow_keeps_optional_number_fields_visible_when_none(self) -> None:
+        """Test optional number selectors remain present when options are unset."""
+        flow = IopoolOptionsFlow()
+        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+
+        result = await flow.async_step_init()
+
+        assert result["type"] == FlowResultType.FORM
+
+        filtration_fields = self._serialize_options_form(result)
+
+        min_duration_field = filtration_fields[
+            f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MIN_DURATION}"
+        ]
+        max_duration_field = filtration_fields[
+            f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MAX_DURATION}"
+        ]
+        winter_duration_field = filtration_fields[
+            f"{CONF_OPTIONS_FILTRATION_WINTER}.{CONF_OPTIONS_FILTRATION_DURATION}"
+        ]
+
+        assert min_duration_field["default"] == 0
+        assert max_duration_field["default"] == 0
+        assert winter_duration_field["default"] == 0
+        assert min_duration_field["selector"]["number"]["min"] == 0.0
+        assert max_duration_field["selector"]["number"]["min"] == 0.0
+        assert winter_duration_field["selector"]["number"]["min"] == 0.0
+
+    @pytest.mark.asyncio
+    async def test_options_flow_preserves_existing_optional_number_values(self) -> None:
+        """Test optional number selectors keep configured values in the form."""
+        options = IopoolOptionsData.to_dict(IopoolOptionsData())
+        options = deepcopy(options)
+        options[CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MIN_DURATION
+        ] = 120
+        options[CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MAX_DURATION
+        ] = 480
+        options[CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_WINTER][
+            CONF_OPTIONS_FILTRATION_DURATION
+        ] = 90
+
+        flow = IopoolOptionsFlow()
+        self._set_flow_config_entry(flow, options)
+
+        result = await flow.async_step_init()
+
+        filtration_fields = self._serialize_options_form(result)
+
+        assert (
+            filtration_fields[
+                f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MIN_DURATION}"
+            ]["default"]
+            == 120
+        )
+        assert (
+            filtration_fields[
+                f"{CONF_OPTIONS_FILTRATION_SUMMER}.{CONF_OPTIONS_FILTRATION_MAX_DURATION}"
+            ]["default"]
+            == 480
+        )
+        assert (
+            filtration_fields[
+                f"{CONF_OPTIONS_FILTRATION_WINTER}.{CONF_OPTIONS_FILTRATION_DURATION}"
+            ]["default"]
+            == 90
+        )
+
+    @pytest.mark.asyncio
+    async def test_options_flow_converts_zero_winter_duration_to_none(self) -> None:
+        """Test zero winter duration is normalized back to None."""
+        flow = IopoolOptionsFlow()
+        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+
+        result = await flow.async_step_init(
+            {
+                CONF_OPTIONS_FILTRATION: {
+                    "switch_entity": "switch.pool_pump",
+                    "summer_filtration.status": False,
+                    "summer_filtration.min_duration": 0,
+                    "summer_filtration.max_duration": 0,
+                    "summer_filtration.slot1.name": None,
+                    "summer_filtration.slot1.start": None,
+                    "summer_filtration.slot1.duration_percent": 50,
+                    "summer_filtration.slot2.name": None,
+                    "summer_filtration.slot2.start": None,
+                    "summer_filtration.slot2.duration_percent": 50,
+                    "winter_filtration.status": False,
+                    "winter_filtration.start": None,
+                    "winter_filtration.duration": 0,
+                }
+            }
+        )
+
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MIN_DURATION
+        ] is None
+        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MAX_DURATION
+        ] is None
+        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_WINTER][
+            CONF_OPTIONS_FILTRATION_DURATION
+        ] is None
+
+    @pytest.mark.asyncio
+    async def test_options_flow_converts_zero_summer_durations_to_none(self) -> None:
+        """Test zero summer durations are normalized back to None."""
+        flow = IopoolOptionsFlow()
+        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+
+        result = await flow.async_step_init(
+            {
+                CONF_OPTIONS_FILTRATION: {
+                    "switch_entity": "switch.pool_pump",
+                    "summer_filtration.status": True,
+                    "summer_filtration.min_duration": 0,
+                    "summer_filtration.max_duration": 0,
+                    "summer_filtration.slot1.name": None,
+                    "summer_filtration.slot1.start": "08:00:00",
+                    "summer_filtration.slot1.duration_percent": 50,
+                    "summer_filtration.slot2.name": None,
+                    "summer_filtration.slot2.start": "20:00:00",
+                    "summer_filtration.slot2.duration_percent": 50,
+                    "winter_filtration.status": False,
+                    "winter_filtration.start": None,
+                    "winter_filtration.duration": None,
+                }
+            }
+        )
+
+        assert result["type"] == FlowResultType.CREATE_ENTRY
+        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MIN_DURATION
+        ] is None
+        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+            CONF_OPTIONS_FILTRATION_MAX_DURATION
+        ] is None
 
     @pytest.mark.asyncio
     async def test_choose_pool_no_new_pools(
@@ -402,7 +589,7 @@ class TestIopoolOptionsFlow:
     async def test_get_iopool_data_client_error(self, hass: HomeAssistant) -> None:
         """Test get_iopool_data with ClientError."""
         with patch(
-            "homeassistant.helpers.aiohttp_client.async_get_clientsession"
+            "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_session.return_value.get.side_effect = ClientError("Network error")
 
@@ -412,13 +599,12 @@ class TestIopoolOptionsFlow:
 
     @pytest.mark.asyncio
     async def test_get_iopool_data_server_error(self, hass: HomeAssistant) -> None:
-        """Test get_iopool_data with server error (5xx)."""
+        """Test get_iopool_data with server error (5xx → CANNOT_CONNECT)."""
         with patch(
             "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 500
-            mock_response.raise_for_status.side_effect = Exception("Server error")
             mock_session.return_value.get.return_value.__aenter__.return_value = (
                 mock_response
             )
@@ -429,13 +615,12 @@ class TestIopoolOptionsFlow:
 
     @pytest.mark.asyncio
     async def test_get_iopool_data_other_http_error(self, hass: HomeAssistant) -> None:
-        """Test get_iopool_data with other HTTP error (e.g., 404)."""
+        """Test get_iopool_data with other HTTP error (e.g., 404 → CANNOT_CONNECT)."""
         with patch(
             "custom_components.iopool.config_flow.async_get_clientsession"
         ) as mock_session:
             mock_response = AsyncMock()
             mock_response.status = 404
-            mock_response.raise_for_status.return_value = None
             mock_session.return_value.get.return_value.__aenter__.return_value = (
                 mock_response
             )
@@ -600,3 +785,19 @@ class TestIopoolOptionsFlow:
 
         flow = IopoolConfigFlow.async_get_options_flow(mock_entry)
         assert isinstance(flow, IopoolOptionsFlow)
+
+
+class TestOptionalNumberSelectorDefault:
+    """Test _optional_number_selector_default helper."""
+
+    def test_returns_zero_for_none(self) -> None:
+        """None should map to zero for selector defaults."""
+        assert _optional_number_selector_default(None) == 0
+
+    def test_returns_input_value(self) -> None:
+        """A positive value should be returned unchanged."""
+        assert _optional_number_selector_default(120) == 120
+
+    def test_returns_zero_unchanged(self) -> None:
+        """Zero should remain zero."""
+        assert _optional_number_selector_default(0) == 0

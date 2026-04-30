@@ -35,6 +35,7 @@ from .const import (
     SENSOR_FILTRATION,
 )
 from .coordinator import IopoolDataUpdateCoordinator
+from .entity import slugify_pool_name
 from .filtration import Filtration
 from .models import IopoolConfigData
 
@@ -133,7 +134,7 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
         self._filtration: Filtration = coordinator.config_entry.runtime_data.filtration
 
         # Convert pool_name to snake_case for consistency
-        snake_pool_name = pool_name.lower().replace(" ", "_")
+        snake_pool_name = slugify_pool_name(pool_name)
         self.entity_id = f"binary_sensor.iopool_{snake_pool_name}_{description.key}"
 
         # Create a unique DeviceInfo for each pool - must match the sensor platform
@@ -169,6 +170,14 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
                     self.hass.states.async_set(
                         self.entity_id, "off", last_state.attributes
                     )
+            # Restore filtration operational state into Filtration instance variables.
+            # This ensures next_stop_time and active_slot survive a HA restart so
+            # the periodic stop check resumes correctly without relying on HA state.
+            if last_state is not None:
+                self._filtration.restore_filtration_state(
+                    last_state.attributes.get("next_stop_time"),
+                    last_state.attributes.get("active_slot"),
+                )
             # Set up listener for switch state changes
             switch_entity = self._filtration.get_switch_entity()
             if switch_entity:
@@ -313,17 +322,21 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
                             attributes["slot2_start_time"] = dt_util.as_local(
                                 slot2_start_time
                             ).isoformat()
-                    # Preserve existing attributes that we want to keep
+                    # Preserve slot end times from HA state
                     preserved_attrs = [
                         "slot1_end_time",
                         "slot2_end_time",
-                        "next_stop_time",
-                        "active_slot",
                     ]
                     if state and state.attributes:
                         for attr in preserved_attrs:
                             if attr in state.attributes:
                                 attributes[attr] = state.attributes[attr]
+                    # Read operational state from filtration instance variables
+                    # (reliable source of truth, not affected by coordinator failures)
+                    if filtration.get_next_stop_time() is not None:
+                        attributes["next_stop_time"] = filtration.get_next_stop_time()
+                    if filtration.get_active_slot() is not None:
+                        attributes["active_slot"] = filtration.get_active_slot()
 
                 # If pool_mode is Active-Winter and winter filtration is enabled
                 if (
@@ -361,15 +374,12 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
                         attributes["winter_filtration_end"] = dt_util.as_local(
                             winter_filtration_end
                         ).isoformat()
-                    # Preserve existing attributes that we want to keep
-                    preserved_attrs = [
-                        "next_stop_time",
-                        "active_slot",
-                    ]
-                    if state and state.attributes:
-                        for attr in preserved_attrs:
-                            if attr in state.attributes:
-                                attributes[attr] = state.attributes[attr]
+                    # Read operational state from filtration instance variables
+                    # (reliable source of truth, not affected by coordinator failures)
+                    if filtration.get_next_stop_time() is not None:
+                        attributes["next_stop_time"] = filtration.get_next_stop_time()
+                    if filtration.get_active_slot() is not None:
+                        attributes["active_slot"] = filtration.get_active_slot()
                 if pool_mode == "Passive-Winter":
                     # If pool_mode is Passive-Winter and other mode attributes are set,
                     # we remove them to avoid confusion
