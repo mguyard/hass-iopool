@@ -24,8 +24,10 @@ class TestIntegrationInit:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.IopoolDataUpdateCoordinator")
     @patch("custom_components.iopool.Filtration")
+    @patch("custom_components.iopool.IopoolCardRegistration")
     async def test_async_setup_entry_success(
         self,
+        mock_card_registration_class,
         mock_filtration_class,
         mock_coordinator_class,
         hass: HomeAssistant,
@@ -93,6 +95,8 @@ class TestIntegrationInit:
         # Mock state as not running
         hass.state = CoreState.not_running
 
+        mock_card_registration_class.return_value.async_register = AsyncMock()
+
         result = await async_setup_entry(hass, config_entry)
 
         assert result is True
@@ -118,8 +122,10 @@ class TestIntegrationInit:
     @pytest.mark.asyncio
     @patch("custom_components.iopool.IopoolDataUpdateCoordinator")
     @patch("custom_components.iopool.Filtration")
+    @patch("custom_components.iopool.IopoolCardRegistration")
     async def test_async_setup_entry_filtration_enabled_running(
         self,
+        mock_card_registration_class,
         mock_filtration_class,
         mock_coordinator_class,
         hass: HomeAssistant,
@@ -161,6 +167,8 @@ class TestIntegrationInit:
 
         # Mock state as running
         hass.state = CoreState.running
+
+        mock_card_registration_class.return_value.async_register = AsyncMock()
 
         result = await async_setup_entry(hass, config_entry)
 
@@ -211,12 +219,15 @@ class TestIntegrationInit:
                 "custom_components.iopool.IopoolDataUpdateCoordinator"
             ) as mock_coordinator_class,
             patch("custom_components.iopool.Filtration") as mock_filtration_class,
+            patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class,
         ):
             mock_coordinator = AsyncMock()
             mock_coordinator.async_config_entry_first_refresh = AsyncMock()
             mock_coordinator_class.return_value = mock_coordinator
 
             mock_filtration_class.return_value = mock_filtration
+
+            mock_card_registration_class.return_value.async_register = AsyncMock()
 
             hass.config_entries.async_forward_entry_setups = AsyncMock(
                 return_value=True
@@ -276,12 +287,15 @@ class TestIntegrationInit:
                 "custom_components.iopool.IopoolDataUpdateCoordinator"
             ) as mock_coordinator_class,
             patch("custom_components.iopool.Filtration") as mock_filtration_class,
+            patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class,
         ):
             mock_coordinator = AsyncMock()
             mock_coordinator.async_config_entry_first_refresh = AsyncMock()
             mock_coordinator_class.return_value = mock_coordinator
 
             mock_filtration_class.return_value = mock_filtration
+
+            mock_card_registration_class.return_value.async_register = AsyncMock()
 
             hass.config_entries.async_forward_entry_setups = AsyncMock(
                 return_value=True
@@ -334,7 +348,8 @@ class TestIntegrationInit:
             await async_setup_entry(hass, config_entry)
 
     @pytest.mark.asyncio
-    async def test_async_unload_entry_success(self, hass: HomeAssistant) -> None:
+    @patch("custom_components.iopool.IopoolCardRegistration")
+    async def test_async_unload_entry_success(self, mock_card_registration_class, hass: HomeAssistant) -> None:
         """Test successful unloading of config entry."""
         config_entry = ConfigEntry(
             version=1,
@@ -365,16 +380,20 @@ class TestIntegrationInit:
         # Mock platform unload
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
+        mock_card_registration_class.return_value.async_unregister = AsyncMock()
+
         result = await async_unload_entry(hass, config_entry)
 
         assert result is True
         remove_listener_mock.assert_called_once()
         # Check that entry was removed from hass.data
         assert config_entry.entry_id not in hass.data[DOMAIN]
+        mock_card_registration_class.return_value.async_unregister.assert_called_once()
 
     @pytest.mark.asyncio
+    @patch("custom_components.iopool.IopoolCardRegistration")
     async def test_async_unload_entry_no_runtime_data(
-        self, hass: HomeAssistant
+        self, mock_card_registration_class, hass: HomeAssistant
     ) -> None:
         """Test unload entry when runtime_data is None."""
         config_entry = ConfigEntry(
@@ -399,13 +418,16 @@ class TestIntegrationInit:
         # Mock platform unload
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
 
+        mock_card_registration_class.return_value.async_unregister = AsyncMock()
+
         result = await async_unload_entry(hass, config_entry)
 
         assert result is True
 
     @pytest.mark.asyncio
+    @patch("custom_components.iopool.IopoolCardRegistration")
     async def test_async_unload_entry_no_remove_listeners(
-        self, hass: HomeAssistant
+        self, mock_card_registration_class, hass: HomeAssistant
     ) -> None:
         """Test unload entry when runtime_data has no remove_time_listeners."""
         config_entry = ConfigEntry(
@@ -431,6 +453,8 @@ class TestIntegrationInit:
 
         # Mock platform unload
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+        mock_card_registration_class.return_value.async_unregister = AsyncMock()
 
         result = await async_unload_entry(hass, config_entry)
 
@@ -467,8 +491,9 @@ class TestIntegrationInit:
         assert result is False
 
     @pytest.mark.asyncio
+    @patch("custom_components.iopool.IopoolCardRegistration")
     async def test_async_unload_entry_domain_not_in_data(
-        self, hass: HomeAssistant
+        self, mock_card_registration_class, hass: HomeAssistant
     ) -> None:
         """Test unload entry when domain is not in hass.data."""
         config_entry = ConfigEntry(
@@ -496,6 +521,8 @@ class TestIntegrationInit:
 
         # Mock platform unload
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+        mock_card_registration_class.return_value.async_unregister = AsyncMock()
 
         result = await async_unload_entry(hass, config_entry)
 
@@ -573,3 +600,114 @@ class TestIntegrationInit:
 
         # Check that reload was still called
         hass.config_entries.async_reload.assert_called_once_with(config_entry.entry_id)
+
+    @pytest.mark.asyncio
+    @patch("custom_components.iopool.IopoolDataUpdateCoordinator")
+    @patch("custom_components.iopool.Filtration")
+    @patch("custom_components.iopool.IopoolCardRegistration")
+    async def test_async_setup_entry_registers_frontend_card(
+        self,
+        mock_card_registration_class,
+        mock_filtration_class,
+        mock_coordinator_class,
+        hass: HomeAssistant,
+    ) -> None:
+        """Test that async_setup_entry calls IopoolCardRegistration.async_register."""
+        config_entry = ConfigEntry(
+            version=1,
+            minor_version=1,
+            domain=DOMAIN,
+            title=TEST_POOL_TITLE,
+            data={"api_key": TEST_API_KEY, "pool_id": TEST_POOL_ID},
+            options={},
+            source="user",
+            unique_id=TEST_POOL_ID,
+            discovery_keys=frozenset(),
+            subentries_data={},
+        )
+
+        mock_coordinator = AsyncMock()
+        mock_coordinator.async_config_entry_first_refresh = AsyncMock()
+        mock_coordinator_class.return_value = mock_coordinator
+
+        mock_filtration = MagicMock()
+        mock_filtration.config_filtration_enabled.return_value = False
+        mock_filtration_class.return_value = mock_filtration
+
+        mock_card_reg_instance = MagicMock()
+        mock_card_reg_instance.async_register = AsyncMock()
+        mock_card_registration_class.return_value = mock_card_reg_instance
+
+        hass.config_entries.async_forward_entry_setups = AsyncMock(return_value=True)
+        hass.bus = MagicMock()
+        hass.bus.async_listen_once = MagicMock()
+        hass.state = CoreState.not_running
+
+        result = await async_setup_entry(hass, config_entry)
+
+        assert result is True
+        mock_card_registration_class.assert_called_once_with(hass)
+        mock_card_reg_instance.async_register.assert_called_once()
+
+    @pytest.mark.asyncio
+    @patch("custom_components.iopool.IopoolCardRegistration")
+    async def test_async_unload_entry_unregisters_frontend_card(
+        self, mock_card_registration_class, hass: HomeAssistant
+    ) -> None:
+        """Test that async_unload_entry calls IopoolCardRegistration.async_unregister on success."""
+        config_entry = ConfigEntry(
+            version=1,
+            minor_version=1,
+            domain=DOMAIN,
+            title=TEST_POOL_TITLE,
+            data={"api_key": TEST_API_KEY, "pool_id": TEST_POOL_ID},
+            options={},
+            source="user",
+            unique_id=TEST_POOL_ID,
+            discovery_keys=frozenset(),
+            subentries_data={},
+        )
+
+        config_entry.runtime_data = MagicMock()
+        config_entry.runtime_data.remove_time_listeners = []
+
+        mock_card_reg_instance = MagicMock()
+        mock_card_reg_instance.async_unregister = AsyncMock()
+        mock_card_registration_class.return_value = mock_card_reg_instance
+
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=True)
+
+        result = await async_unload_entry(hass, config_entry)
+
+        assert result is True
+        mock_card_registration_class.assert_called_once_with(hass)
+        mock_card_reg_instance.async_unregister.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_async_unload_entry_platform_fails_does_not_unregister_card(
+        self, hass: HomeAssistant
+    ) -> None:
+        """Test that async_unload_entry does NOT call async_unregister when platform unload fails."""
+        config_entry = ConfigEntry(
+            version=1,
+            minor_version=1,
+            domain=DOMAIN,
+            title=TEST_POOL_TITLE,
+            data={"api_key": TEST_API_KEY, "pool_id": TEST_POOL_ID},
+            options={},
+            source="user",
+            unique_id=TEST_POOL_ID,
+            discovery_keys=frozenset(),
+            subentries_data={},
+        )
+
+        config_entry.runtime_data = MagicMock()
+        config_entry.runtime_data.remove_time_listeners = []
+
+        hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
+
+        with patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class:
+            result = await async_unload_entry(hass, config_entry)
+
+        assert result is False
+        mock_card_registration_class.assert_not_called()
