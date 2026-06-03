@@ -6,18 +6,13 @@ import pathlib
 from homeassistant.components.http import StaticPathConfig
 from homeassistant.const import __version__ as ha_version
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.event import async_call_later
 
 _LOGGER = logging.getLogger(__name__)
 
 URL_BASE = "/iopool"
 CARD_FILENAME = "iopool-card.js"
 
-
-def _get_card_version() -> str:
-    """Get the card version from iopool-card.version file."""
-    version_file = pathlib.Path(__file__).parent / "iopool-card.version"
-    return version_file.read_text().strip()
+_CARD_VERSION = (pathlib.Path(__file__).parent / "iopool-card.version").read_text().strip()
 
 
 def _ha_version_tuple(version_str: str) -> tuple:
@@ -59,7 +54,7 @@ class IopoolCardRegistration:
         """Register static path and Lovelace resource."""
         await self._async_register_path()
         if self.lovelace_resource_mode == "storage":
-            await self._async_wait_for_resources()
+            await self._async_register_card()
 
     async def _async_register_path(self) -> None:
         """Register static path for the frontend directory."""
@@ -71,23 +66,13 @@ class IopoolCardRegistration:
         except RuntimeError:
             _LOGGER.debug("iopool frontend static path already registered")
 
-    async def _async_wait_for_resources(self) -> None:
-        """Wait for Lovelace resources to load, then register card."""
-
-        async def check_resources_loaded(now):
-            if self.lovelace_resources.loaded:
-                await self._async_register_card()
-            else:
-                _LOGGER.debug("Lovelace resources not yet loaded, retrying in 5 seconds")
-                async_call_later(self.hass, 5, check_resources_loaded)
-
-        await check_resources_loaded(0)
-
     async def _async_register_card(self) -> None:
         """Add or update the iopool card Lovelace resource."""
-        version = _get_card_version()
+        version = _CARD_VERSION
         url = f"{URL_BASE}/{CARD_FILENAME}"
         _LOGGER.debug("Registering iopool card as version %s", version)
+
+        await self.lovelace_resources.async_get_info()
 
         existing = [
             res for res in self.lovelace_resources.async_items()
@@ -124,6 +109,7 @@ class IopoolCardRegistration:
         if self.lovelace_resource_mode != "storage":
             return
         url = f"{URL_BASE}/{CARD_FILENAME}"
+        await self.lovelace_resources.async_get_info()
         resources = [
             res for res in self.lovelace_resources.async_items()
             if res["url"].startswith(url)
