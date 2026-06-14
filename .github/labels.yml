@@ -38,3 +38,6 @@
 - name: waiting
   description: Waiting for something
   color: daa036
+- name: card-update
+  description: Update hass-iopool-card
+  color: 43d1cd

@@ -6,6 +6,35 @@ next: /integration/misc/contributing
 nextTitle: Misc
 ---
 
+
+## New Method - Bundled
+
+<Info>
+  No separate installation is needed. The card is bundled (since `1.2.5-beta.1`) with the hass-iopool integration and becomes available automatically once the integration is installed.
+</Info>
+
+The iopool Card is the main Lovelace card for the [hass-iopool](https://docs.page/mguyard/hass-iopool) integration. It brings together the most useful pool information from your iopool EcO sensor in a single dashboard view.
+It can show temperature, pH, and ORP gauges, pump controls, filtration mode selection, boost controls, daily filtration progress, and a temperature history chart.
+
+<Card title="What you get" icon="pool">
+- Live gauges for temperature, pH, and ORP
+- Pump control when a pump switch is configured
+- Filtration mode selector and boost selector
+- Daily filtration status and recommendation
+- Temperature history chart with period selector
+</Card>
+
+All details about the iopool card are available [here](https://docs.page/mguyard/hass-iopool-card)
+
+<Image src="https://raw.githubusercontent.com/mguyard/hass-iopool-card/main/docs/assets/full-card.png" alt="iopool Card" />
+
+<Info>
+  There is no separate HACS repository for the card. Install the hass-iopool integration through
+  HACS, and the card is exposed automatically.
+</Info>
+
+## Old Method
+
 This page explains how to add a custom dashboard card for your iopool integration in Home Assistant. You can personalize the card by entering your pool name below. The YAML code will update automatically.
 
 > **Tip:** Replace `mypool` with the actual name of your pool entity (e.g., `home`, `garden`, etc.).

@@ -1,3 +1,30 @@
+# [1.3.0-beta.3](https://github.com/mguyard/hass-iopool/compare/v1.3.0-beta.2...v1.3.0-beta.3) (2026-06-07)
+
+
+### Bug Fixes
+
+* **iopool-card:** update iopool-card to v1.0.0-beta.5 ([cbca50b](https://github.com/mguyard/hass-iopool/commit/cbca50bc513d87d8780ec33f4e170b11fcb0a0d8))
+
+# [1.3.0-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.3.0-beta.1...v1.3.0-beta.2) (2026-06-03)
+
+
+### Bug Fixes
+
+* **iopool-card:** update iopool-card to v1.0.0-beta.4 ([f9aefaa](https://github.com/mguyard/hass-iopool/commit/f9aefaadaa7e1fcadae5fd70a4f257978d5aeb15))
+
+# [1.3.0-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.2.4-beta.4...v1.3.0-beta.1) (2026-06-03)
+
+
+### Bug Fixes
+
+* **iopool-card:** update iopool-card to v1.0.0 ([94ef4cc](https://github.com/mguyard/hass-iopool/commit/94ef4cc576261b3aeac4bac214be5a8cd7fff7f7))
+* **iopool-card:** update iopool-card to v1.0.0-beta.3 ([0f812ef](https://github.com/mguyard/hass-iopool/commit/0f812efccf6fbdf3dc1c413ddd5e57c0724629d6))
+
+
+### Features
+
+* **frontend:** ✨ Add initial frontend card and versioning support ([7b5014f](https://github.com/mguyard/hass-iopool/commit/7b5014fea4225bedc99b560801d1a2d4c947f2bc))
+
 ## [1.2.4](https://github.com/mguyard/hass-iopool/compare/v1.2.3...v1.2.4) (2026-04-30)
 
 

@@ -11,6 +11,7 @@ from homeassistant.core import CoreState, Event, HomeAssistant
 from .const import CONF_API_KEY, DOMAIN
 from .coordinator import IopoolDataUpdateCoordinator
 from .filtration import Filtration
+from .frontend import IopoolCardRegistration
 from .models import IopoolConfigData, IopoolConfigEntry, IopoolData
 
 _LOGGER = logging.getLogger(__name__)
@@ -76,6 +77,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: IopoolConfigEntry) -> bo
 
     hass.bus.async_listen_once(EVENT_HOMEASSISTANT_STARTED, _on_started)
 
+    # Register frontend card resource
+    await IopoolCardRegistration(hass).async_register()
+
     return True
 
 
@@ -90,6 +94,7 @@ async def async_unload_entry(hass: HomeAssistant, entry: IopoolConfigEntry) -> b
     if unload_ok := await hass.config_entries.async_unload_platforms(entry, PLATFORMS):
         if DOMAIN in hass.data and entry.entry_id in hass.data[DOMAIN]:
             hass.data[DOMAIN].pop(entry.entry_id)
+        await IopoolCardRegistration(hass).async_unregister()
         return unload_ok
     return False
 

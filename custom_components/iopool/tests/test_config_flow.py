@@ -714,6 +714,7 @@ class TestIopoolOptionsFlow:
             patch(
                 "custom_components.iopool.config_flow.get_iopool_data"
             ) as mock_get_data,
+            patch("homeassistant.config_entries.report_usage"),
         ):
             # Mock successful API validation
             mock_get_data.return_value.result_code = ApiKeyValidationResult.SUCCESS
