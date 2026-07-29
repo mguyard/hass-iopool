@@ -1,3 +1,10 @@
+## [1.3.2-beta.1](https://github.com/mguyard/hass-iopool/compare/v1.3.1...v1.3.2-beta.1) (2026-07-29)
+
+
+### Bug Fixes
+
+* **iopool-card:** update iopool-card to v1.2.0-beta.1 ([4b4e906](https://github.com/mguyard/hass-iopool/commit/4b4e9060d5cae6cbe6a1655c46960c572c036c19))
+
 ## [1.3.1](https://github.com/mguyard/hass-iopool/compare/v1.3.0...v1.3.1) (2026-06-14)
 
 
