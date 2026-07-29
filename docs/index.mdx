@@ -4,26 +4,6 @@ next: /integration
 nextTitle: Installation
 ---
 
-<Badges>
-    <Image src="https://img.shields.io/github/license/mguyard/hass-iopool?style=default&color=0080ff" alt="License" />
-    <Image src="https://img.shields.io/github/last-commit/mguyard/hass-iopool?style=default&color=0080ff" alt="Last Commit" />
-    <Image src="https://img.shields.io/github/languages/top/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-top-language" />
-    <Image src="https://img.shields.io/github/languages/count/mguyard/hass-iopool?style=default&color=0080ff" alt="repo-language-count" />
-    <Image src="https://codecov.io/github/mguyard/hass-iopool/graph/badge.svg?token=N2Y1LAEBGG" alt="codecov" />
-</Badges>
-<Badges>
-    <Image src="https://img.shields.io/github/v/release/mguyard/hass-iopool?label=Stable" alt="Last Stable Release" />
-    <Image src="https://img.shields.io/github/release-date/mguyard/hass-iopool?label=Stable" alt="Last Release Date Stable" />
-    <Image src="https://img.shields.io/github/v/release/mguyard/hass-iopool?label=Beta&include_prereleases" alt="Last Beta Release" />
-    <Image src="https://img.shields.io/github/release-date-pre/mguyard/hass-iopool?label=Beta" alt="Last Release Date Beta" />
-    <Image src="https://img.shields.io/github/issues-search/mguyard/hass-iopool?query=label%3Abug%20is%3Aopened&label=Open%20Bugs" alt="Open Bugs" />
-    <Image src="https://img.shields.io/github/issues-pr/mguyard/hass-iopool" alt="Open PRs" />
-</Badges>
-<Badges>
-    <Image src="https://github.com/mguyard/hass-iopool/actions/workflows/home-assistant.yaml/badge.svg" alt="Home Assistant Actions" />
-    <Image src="https://github.com/mguyard/hass-iopool/actions/workflows/release.yaml/badge.svg" alt="Release Actions" />
-</Badges>
-
 # Introduction
 
 The iopool integration for Home Assistant allows you to seamlessly connect and monitor your iopool EcO pool system within the Home Assistant platform.
@@ -87,9 +67,3 @@ If you already have an iopool account but have never made a purchase, you can co
 This integration is provided as-is, without any warranty of any kind. The developer of this integration cannot be held liable for any issues arising from its use.
 The user installs and uses this integration at their own risk and with full knowledge of the potential implications. The data provided by this integration does not replace professional pool maintenance.
 </Warning>
-
-<!--  Custom component to show Github Badges on a oneline : https://use.docs.page/components/custom  -->
-
-export const Badges = props => {
-  return <div class="justify-center items-center flex flex-wrap gap-2">{props.children}</div>;
-};
