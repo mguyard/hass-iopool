@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from custom_components.iopool.const import DOMAIN
+from custom_components.iopool.const import SENSOR_ELAPSED_FILTRATION, DOMAIN
 from custom_components.iopool.sensor import (
     POOL_SENSORS,
     IopoolSensor,
@@ -13,10 +13,13 @@ from custom_components.iopool.sensor import (
 )
 import pytest
 
+from homeassistant.components.history_stats.sensor import HistoryStatsSensor
 from homeassistant.components.sensor import SensorEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers import entity_registry as er
 
 from .conftest import TEST_API_KEY, TEST_POOL_ID, TEST_POOL_TITLE
 
@@ -373,6 +376,104 @@ class TestAsyncSetupEntryEdgeCases:
         hs_call_kwargs = mock_history_stats.call_args[1]
         assert hs_call_kwargs.get("min_state_duration") == timedelta(0)
         assert mock_async_add_entities.call_count >= 1
+
+    @pytest.mark.asyncio
+    @patch("homeassistant.helpers.template.Template")
+    @patch(
+        "homeassistant.components.history_stats.coordinator.HistoryStatsUpdateCoordinator"
+    )
+    @patch("homeassistant.components.history_stats.data.HistoryStats")
+    async def test_async_setup_entry_history_stats_sensor_is_really_constructed(
+        self,
+        mock_history_stats,
+        mock_coordinator_class,
+        mock_template,
+        tmp_path,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        """Regression test for home-assistant/core#177594 (merged 2026-07-30,
+        shipped in HA 2026.8.0): HistoryStatsSensor.__init__ dropped both
+        `hass` and `source_entity_id`, and made the remaining parameters
+        keyword-only.
+
+        Unlike test_async_setup_entry_with_switch_entity above, this test
+        does NOT patch HistoryStatsSensor itself. Constructing it for real is
+        the whole point: a mocked class accepts any kwargs, so it can never
+        catch a TypeError raised by a real, incompatible __init__ signature
+        -- which is exactly why the earlier test kept passing while the
+        elapsed_filtration_duration sensor silently failed to appear on HA
+        2026.8+ (async_setup_entry swallows the TypeError via its
+        `except (ValueError, KeyError, TypeError)` clause and only logs it).
+
+        Also uses a real `homeassistant.core.HomeAssistant` instance with
+        device/entity registries loaded, not the MagicMock `hass` fixture
+        from conftest.py, since the fix's `device=` fallback (for HA 2026.8+)
+        calls the real `async_entity_id_to_device`, which needs a real
+        registry to query.
+        """
+        real_hass = HomeAssistant(str(tmp_path))
+        real_hass.data[dr.DATA_REGISTRY] = dr.DeviceRegistry(real_hass)
+        await dr.async_load(real_hass, load_empty=True)
+        await er.async_load(real_hass, load_empty=True)
+
+        config_entry = ConfigEntry(
+            version=1,
+            minor_version=1,
+            domain=DOMAIN,
+            title=TEST_POOL_TITLE,
+            data={
+                "api_key": TEST_API_KEY,
+                "pool_id": TEST_POOL_ID,
+            },
+            options={},
+            source="user",
+            unique_id=TEST_POOL_ID,
+            discovery_keys=frozenset(),
+            subentries_data={},
+        )
+
+        mock_pool = MagicMock()
+        mock_pool.id = TEST_POOL_ID
+        mock_pool.title = "Test Pool"
+
+        mock_coordinator = MagicMock()
+        mock_coordinator.get_pool_data.return_value = mock_pool
+
+        mock_config = MagicMock()
+        mock_config.options.filtration.get.return_value = "switch.pool_pump"
+
+        mock_runtime_data = MagicMock()
+        mock_runtime_data.coordinator = mock_coordinator
+        mock_runtime_data.config = mock_config
+        config_entry.runtime_data = mock_runtime_data
+
+        mock_template.return_value = MagicMock()
+
+        mock_history_coordinator = MagicMock()
+        mock_history_coordinator.async_config_entry_first_refresh = AsyncMock(
+            return_value=None
+        )
+        mock_coordinator_class.return_value = mock_history_coordinator
+
+        mock_async_add_entities = MagicMock()
+
+        await async_setup_entry(real_hass, config_entry, mock_async_add_entities)
+
+        assert "Failed to set up history_stats sensor" not in caplog.text
+
+        # First call adds POOL_SENSORS; second call (only reached if
+        # HistoryStatsSensor construction didn't raise) adds the real
+        # history_stats entity.
+        assert mock_async_add_entities.call_count == 2
+        added_entities = mock_async_add_entities.call_args_list[1][0][0]
+        assert len(added_entities) == 1
+        history_stats_entity = added_entities[0]
+
+        assert isinstance(history_stats_entity, HistoryStatsSensor)
+        assert (
+            history_stats_entity.unique_id
+            == f"{config_entry.entry_id}_{TEST_POOL_ID}_{SENSOR_ELAPSED_FILTRATION}"
+        )
 
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.template.Template")
