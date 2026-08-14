@@ -8,17 +8,21 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from custom_components.iopool.const import DOMAIN, SENSOR_ELAPSED_FILTRATION
 from custom_components.iopool.sensor import (
     POOL_SENSORS,
+    IopoolElapsedFiltrationSensor,
     IopoolSensor,
     async_setup_entry,
 )
 import pytest
 
-from homeassistant.components.history_stats.sensor import HistoryStatsSensor
-from homeassistant.components.sensor import SensorEntityDescription
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntityDescription,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTemperature
+from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .conftest import TEST_API_KEY, TEST_POOL_ID, TEST_POOL_TITLE
 
@@ -298,7 +302,6 @@ class TestAsyncSetupEntryEdgeCases:
 
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.template.Template")
-    @patch("homeassistant.components.history_stats.sensor.HistoryStatsSensor")
     @patch(
         "homeassistant.components.history_stats.coordinator.HistoryStatsUpdateCoordinator"
     )
@@ -307,7 +310,6 @@ class TestAsyncSetupEntryEdgeCases:
         self,
         mock_history_stats,
         mock_coordinator_class,
-        mock_sensor_class,
         mock_template,
         hass: HomeAssistant,
     ) -> None:
@@ -358,9 +360,6 @@ class TestAsyncSetupEntryEdgeCases:
         )
         mock_coordinator_class.return_value = mock_history_coordinator
 
-        mock_history_sensor = MagicMock()
-        mock_sensor_class.return_value = mock_history_sensor
-
         mock_async_add_entities = MagicMock()
 
         await async_setup_entry(hass, config_entry, mock_async_add_entities)
@@ -369,12 +368,6 @@ class TestAsyncSetupEntryEdgeCases:
         mock_template.assert_called()
         mock_history_stats.assert_called_once()
         mock_coordinator_class.assert_called_once()
-        # Verify HistoryStatsSensor was called with state_class=MEASUREMENT (required since HA 2026.3)
-        mock_sensor_class.assert_called_once()
-        call_kwargs = mock_sensor_class.call_args[1]
-        from homeassistant.components.sensor import SensorStateClass
-
-        assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
         # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
         from datetime import timedelta
 
@@ -388,7 +381,7 @@ class TestAsyncSetupEntryEdgeCases:
         "homeassistant.components.history_stats.coordinator.HistoryStatsUpdateCoordinator"
     )
     @patch("homeassistant.components.history_stats.data.HistoryStats")
-    async def test_async_setup_entry_history_stats_sensor_is_really_constructed(
+    async def test_async_setup_entry_elapsed_filtration_sensor_identity(
         self,
         mock_history_stats,
         mock_coordinator_class,
@@ -396,21 +389,21 @@ class TestAsyncSetupEntryEdgeCases:
         hass: HomeAssistant,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Build a real HistoryStatsSensor and check it is wired to the device.
+        """Pin down every attribute an existing install depends on.
 
-        Regression test for home-assistant/core#177594 (shipped in HA 2026.8.0),
-        which dropped both `hass` and `source_entity_id` from
-        HistoryStatsSensor.__init__, made the remaining parameters keyword-only,
-        and moved device resolution to the caller.
+        This sensor exists on every install that has a filtration switch
+        configured, so these values are a migration contract, not style:
 
-        Unlike test_async_setup_entry_with_switch_entity above, this test does
-        NOT patch HistoryStatsSensor itself. Constructing it for real is the
-        whole point: a mocked class accepts any kwargs, so it can never catch a
-        TypeError raised by an incompatible __init__ signature -- which is
-        exactly why the mocked test kept passing while the
-        elapsed_filtration_duration sensor silently failed to appear on HA
-        2026.8+ (async_setup_entry swallows the TypeError via its
-        `except (ValueError, KeyError, TypeError)` clause and only logs it).
+        - `unique_id` and `entity_id` identify the entity in the registry.
+          Change either and users silently lose the entity's recorded history.
+        - unit, `state_class` and `device_class` must stay stable or the
+          recorder's long-term statistics break.
+        - `has_entity_name` is False because the name is a full sentence built
+          from the pool title, not a suffix to the device name. Flipping it
+          would rename the entity for everyone.
+
+        The sensor is built for real (not mocked): a mocked class accepts
+        anything and would let all of the above drift unnoticed.
         """
         hass.config.language = "en"
 
@@ -453,40 +446,45 @@ class TestAsyncSetupEntryEdgeCases:
         )
         mock_coordinator_class.return_value = mock_history_coordinator
 
-        # The pool device the history_stats sensor must be attached to
-        device_registry = dr.async_get(hass)
-        pool_device = MagicMock()
-        device_registry.async_get_device.return_value = pool_device
-
         mock_async_add_entities = MagicMock()
 
         await async_setup_entry(hass, config_entry, mock_async_add_entities)
 
         assert "Failed to set up history_stats sensor" not in caplog.text
 
-        # First call adds POOL_SENSORS; second call (only reached if
-        # HistoryStatsSensor construction didn't raise) adds the real
-        # history_stats entity.
+        # First call adds POOL_SENSORS; second call (only reached if the sensor
+        # was constructed without raising) adds the elapsed filtration entity.
         assert mock_async_add_entities.call_count == 2
         added_entities = mock_async_add_entities.call_args_list[1][0][0]
         assert len(added_entities) == 1
-        history_stats_entity = added_entities[0]
+        sensor = added_entities[0]
 
-        assert isinstance(history_stats_entity, HistoryStatsSensor)
+        assert isinstance(sensor, IopoolElapsedFiltrationSensor)
+
+        # Registry identity
         assert (
-            history_stats_entity.unique_id
+            sensor.unique_id
             == f"{config_entry.entry_id}_{TEST_POOL_ID}_{SENSOR_ELAPSED_FILTRATION}"
         )
-        # Since HA 2026.8 resolving the device is the caller's job, so the
-        # grouping under the pool device is ours to get right, not core's.
-        device_registry.async_get_device.assert_called_once_with(
-            identifiers={(DOMAIN, TEST_POOL_ID)}
+        assert sensor.entity_id == (
+            f"sensor.iopool_test_pool_{SENSOR_ELAPSED_FILTRATION}"
         )
-        assert history_stats_entity.device_entry is pool_device
+
+        # Recorder / statistics contract
+        assert sensor.native_unit_of_measurement == UnitOfTime.HOURS
+        assert sensor.state_class == SensorStateClass.MEASUREMENT
+        assert sensor.device_class == SensorDeviceClass.DURATION
+
+        # Displayed name
+        assert sensor.has_entity_name is False
+        assert sensor.name == "Test Pool Elapsed Filtration Duration Today"
+
+        # Device grouping is declared, not resolved at construction time, so it
+        # cannot race the creation of the pool device on a first install.
+        assert sensor.device_info["identifiers"] == {(DOMAIN, TEST_POOL_ID)}
 
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.template.Template")
-    @patch("homeassistant.components.history_stats.sensor.HistoryStatsSensor")
     @patch(
         "homeassistant.components.history_stats.coordinator.HistoryStatsUpdateCoordinator"
     )
@@ -495,7 +493,6 @@ class TestAsyncSetupEntryEdgeCases:
         self,
         mock_history_stats,
         mock_coordinator_class,
-        mock_sensor_class,
         mock_template,
         hass: HomeAssistant,
     ) -> None:
@@ -546,9 +543,6 @@ class TestAsyncSetupEntryEdgeCases:
         )
         mock_coordinator_class.return_value = mock_history_coordinator
 
-        mock_history_sensor = MagicMock()
-        mock_sensor_class.return_value = mock_history_sensor
-
         mock_async_add_entities = MagicMock()
 
         await async_setup_entry(hass, config_entry, mock_async_add_entities)
@@ -558,12 +552,9 @@ class TestAsyncSetupEntryEdgeCases:
         call_args = mock_coordinator_class.call_args[0]
         friendly_name = call_args[3]  # 4th argument is friendly_name
         assert friendly_name == "Piscine Test Durée de filtration écoulée aujourd'hui"
-        # Verify HistoryStatsSensor was called with state_class=MEASUREMENT (required since HA 2026.3)
-        mock_sensor_class.assert_called_once()
-        call_kwargs = mock_sensor_class.call_args[1]
-        from homeassistant.components.sensor import SensorStateClass
-
-        assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
+        # The same name must reach the entity itself, not just the coordinator
+        sensor = mock_async_add_entities.call_args_list[1][0][0][0]
+        assert sensor.name == friendly_name
         # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
         from datetime import timedelta
 
@@ -934,3 +925,87 @@ class TestIopoolSensorProperties:
 
         orp_attributes = orp_sensor.extra_state_attributes
         assert "display_precision" not in orp_attributes
+
+
+class TestIopoolElapsedFiltrationSensor:
+    """Test the elapsed filtration sensor's own logic."""
+
+    def _make_sensor(self, coordinator_data) -> IopoolElapsedFiltrationSensor:
+        """Build a sensor whose coordinator returns the given data."""
+        coordinator = MagicMock()
+        coordinator.data = coordinator_data
+        return IopoolElapsedFiltrationSensor(
+            coordinator,
+            "test_entry_id",
+            TEST_POOL_ID,
+            TEST_POOL_TITLE,
+            "Test Pool Elapsed Filtration Duration Today",
+        )
+
+    @pytest.mark.parametrize(
+        ("seconds_matched", "expected"),
+        [
+            (3600, 1.0),
+            (5400, 1.5),
+            (0, 0.0),
+            (131.0169885, pytest.approx(0.03639360791666667)),
+        ],
+    )
+    def test_native_value_converts_seconds_to_hours(
+        self, seconds_matched: float, expected: float
+    ) -> None:
+        """Seconds from history_stats are reported as hours."""
+        data = MagicMock()
+        data.seconds_matched = seconds_matched
+
+        assert self._make_sensor(data).native_value == expected
+
+    def test_native_value_none_when_coordinator_has_no_data(self) -> None:
+        """A coordinator that has not refreshed yet yields no value."""
+        assert self._make_sensor(None).native_value is None
+
+    def test_native_value_none_when_nothing_matched(self) -> None:
+        """history_stats reports None rather than 0 when it cannot compute."""
+        data = MagicMock()
+        data.seconds_matched = None
+
+        assert self._make_sensor(data).native_value is None
+
+    @pytest.mark.parametrize(
+        ("pool_name", "expected_entity_id"),
+        [
+            ("Test Pool", "sensor.iopool_test_pool_elapsed_filtration_duration"),
+            ("Piscine été", "sensor.iopool_piscine_ete_elapsed_filtration_duration"),
+        ],
+    )
+    def test_entity_id_is_slugified_from_pool_name(
+        self, pool_name: str, expected_entity_id: str
+    ) -> None:
+        """The entity_id follows the same slug rules as the other sensors."""
+        sensor = IopoolElapsedFiltrationSensor(
+            MagicMock(), "test_entry_id", TEST_POOL_ID, pool_name, "Whatever"
+        )
+
+        assert sensor.entity_id == expected_entity_id
+
+    async def test_added_to_hass_subscribes_to_source_state_changes(self) -> None:
+        """The coordinator's state listener must be wired up and torn down.
+
+        Without it the sensor only updates on the coordinator's own schedule
+        and ignores the pump switch turning on or off.
+        """
+        coordinator = MagicMock()
+        remove_listener = MagicMock()
+        coordinator.async_setup_state_listener.return_value = remove_listener
+        sensor = IopoolElapsedFiltrationSensor(
+            coordinator, "test_entry_id", TEST_POOL_ID, TEST_POOL_TITLE, "Whatever"
+        )
+        sensor.async_on_remove = MagicMock()
+        sensor.hass = MagicMock()
+        sensor.async_write_ha_state = MagicMock()
+
+        with patch.object(CoordinatorEntity, "async_added_to_hass", AsyncMock()):
+            await sensor.async_added_to_hass()
+
+        coordinator.async_setup_state_listener.assert_called_once_with()
+        sensor.async_on_remove.assert_called_once_with(remove_listener)

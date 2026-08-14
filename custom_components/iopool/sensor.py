@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -14,8 +14,9 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers import device_registry as dr
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util import dt as dt_util
 
 from .api_models import IopoolAPIResponsePool
@@ -26,6 +27,7 @@ from .const import (
     CONF_OPTIONS_FILTRATION_SWITCH_ENTITY,
     CONF_POOL_ID,
     DOMAIN,
+    MANUFACTURER,
     SENSOR_ELAPSED_FILTRATION,
     SENSOR_FILTRATION_RECOMMENDATION,
     SENSOR_IOPOOL_MODE,
@@ -37,7 +39,15 @@ from .coordinator import IopoolDataUpdateCoordinator
 from .entity import IopoolEntity, slugify_pool_name
 from .models import IopoolConfigEntry
 
+if TYPE_CHECKING:
+    from homeassistant.components.history_stats.coordinator import (
+        HistoryStatsUpdateCoordinator,
+    )
+
 _LOGGER = logging.getLogger(__name__)
+
+# Seconds in an hour, for the elapsed filtration conversion
+SECONDS_PER_HOUR = 3600
 
 # Sensor definitions for each pool
 POOL_SENSORS = [
@@ -126,12 +136,10 @@ async def async_setup_entry(
         switch_entity,
     )
     if switch_entity:
-        from homeassistant.components.history_stats.const import CONF_TYPE_TIME
         from homeassistant.components.history_stats.coordinator import (
             HistoryStatsUpdateCoordinator,
         )
         from homeassistant.components.history_stats.data import HistoryStats
-        from homeassistant.components.history_stats.sensor import HistoryStatsSensor
         from homeassistant.helpers.template import Template
 
         start_template = Template(
@@ -163,7 +171,7 @@ async def async_setup_entry(
             min_state_duration=timedelta(0),
         )
         # Create the coordinator
-        coordinator = HistoryStatsUpdateCoordinator(
+        history_coordinator = HistoryStatsUpdateCoordinator(
             hass,
             history_stats,
             entry,
@@ -171,29 +179,84 @@ async def async_setup_entry(
         )
         try:
             # Ensure the coordinator is initialized
-            await coordinator.async_config_entry_first_refresh()
-            # Since HA 2026.8 (home-assistant/core#177594) HistoryStatsSensor no
-            # longer resolves its own device: the caller passes a pre-computed
-            # one. Looking the device up by its identifiers rather than by the
-            # temperature sensor's entity_id keeps the grouping working even if
-            # the user renames that entity.
-            device = dr.async_get(hass).async_get_device(
-                identifiers={(DOMAIN, pool_id)}
-            )
+            await history_coordinator.async_config_entry_first_refresh()
             # Create the sensor with the coordinator
-            history_stats_entity = HistoryStatsSensor(
-                coordinator=coordinator,
-                sensor_type=CONF_TYPE_TIME,
-                name=friendly_name,
-                unique_id=f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
-                state_class=SensorStateClass.MEASUREMENT,
-                device=device,
+            history_stats_entity = IopoolElapsedFiltrationSensor(
+                history_coordinator,
+                entry.entry_id,
+                pool_id,
+                pool.title,
+                friendly_name,
             )
-            history_stats_entity.entity_id = f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_ELAPSED_FILTRATION}"
             # Add the entity to Home Assistant
             async_add_entities([history_stats_entity])
         except (ValueError, KeyError, TypeError) as err:
             _LOGGER.error("Failed to set up history_stats sensor: %s", err)
+
+
+class IopoolElapsedFiltrationSensor(CoordinatorEntity, SensorEntity):
+    """Filtration time elapsed today, computed from the pump switch history.
+
+    Deliberately does not reuse history_stats' own HistoryStatsSensor. That
+    class is internal API of another integration, and its constructor has
+    broken this integration twice already (HA 2026.3 and 2026.8). Only
+    HistoryStats and HistoryStatsUpdateCoordinator are reused: they are data
+    and coordination classes, far more stable than core's entity layer.
+    """
+
+    coordinator: HistoryStatsUpdateCoordinator
+
+    _attr_device_class = SensorDeviceClass.DURATION
+    _attr_native_unit_of_measurement = UnitOfTime.HOURS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_suggested_display_precision = 2
+    _attr_icon = "mdi:chart-line"
+    # The name is a full sentence built from the pool title, not a suffix to
+    # the device name. Keep it that way so existing installs keep the name
+    # they were created with.
+    _attr_has_entity_name = False
+
+    def __init__(
+        self,
+        coordinator: HistoryStatsUpdateCoordinator,
+        config_entry_id: str,
+        pool_id: str,
+        pool_name: str,
+        name: str,
+    ) -> None:
+        """Initialize the elapsed filtration sensor."""
+        super().__init__(coordinator)
+        self._attr_name = name
+        self._attr_unique_id = (
+            f"{config_entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}"
+        )
+        self.entity_id = (
+            f"sensor.iopool_{slugify_pool_name(pool_name)}_{SENSOR_ELAPSED_FILTRATION}"
+        )
+        # Declaring the device here lets the entity platform do the linking.
+        # Resolving it from the registry at construction time would be racy:
+        # on a first install the pool device does not exist yet at this point.
+        self._attr_device_info = DeviceInfo(
+            identifiers={(DOMAIN, pool_id)},
+            name=pool_name,
+            manufacturer=MANUFACTURER,
+            model="iopool ECO",
+        )
+
+    async def async_added_to_hass(self) -> None:
+        """Start tracking the source entity once added to Home Assistant."""
+        await super().async_added_to_hass()
+        # Without this the coordinator only refreshes on its own schedule and
+        # ignores state changes of the pump switch.
+        self.async_on_remove(self.coordinator.async_setup_state_listener())
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the filtration time elapsed today, in hours."""
+        data = self.coordinator.data
+        if data is None or data.seconds_matched is None:
+            return None
+        return data.seconds_matched / SECONDS_PER_HOUR
 
 
 class IopoolSensor(IopoolEntity, SensorEntity):
