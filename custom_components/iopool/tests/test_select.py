@@ -104,7 +104,9 @@ class TestIopoolSelect:
             TEST_POOL_ID,
             pool_name,
         )
-        expected_entity_id = f"select.iopool_{expected_id_fragment}_{select_description.key}"
+        expected_entity_id = (
+            f"select.iopool_{expected_id_fragment}_{select_description.key}"
+        )
         assert select_entity.entity_id == expected_entity_id
 
 

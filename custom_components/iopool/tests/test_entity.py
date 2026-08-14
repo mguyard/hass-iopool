@@ -2,9 +2,8 @@
 
 from __future__ import annotations
 
-import pytest
-
 from custom_components.iopool.entity import slugify_pool_name
+import pytest
 
 
 class TestSlugifyPoolName:

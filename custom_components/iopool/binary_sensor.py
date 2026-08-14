@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime
+from datetime import datetime
 import logging
 from typing import Any
 
@@ -349,7 +349,7 @@ class IopoolBinarySensor(CoordinatorEntity, BinarySensorEntity, RestoreEntity):
                     )
 
                     winter_filtration_start_today = datetime.combine(
-                        date.today(),
+                        dt_util.now().date(),
                         winter_filtration_start_time,
                     )
                     winter_filtration_end = (

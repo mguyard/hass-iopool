@@ -15,6 +15,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_API_KEY
 from homeassistant.core import HomeAssistant
 from homeassistant.data_entry_flow import FlowResultType
+from homeassistant.helpers import device_registry as dr
 
 
 # pytest-html configuration
@@ -22,25 +23,25 @@ def pytest_configure(config):
     """Configure pytest-html metadata."""
     # Add project metadata using the _metadata attribute (modern pytest-html)
     if hasattr(config, "_metadata"):
-        config._metadata["Project"] = "hass-iopool"  # noqa: SLF001
-        config._metadata["Description"] = (  # noqa: SLF001
+        config._metadata["Project"] = "hass-iopool"
+        config._metadata["Description"] = (
             "Home Assistant Custom Integration for iopool pool monitoring"
         )
-        config._metadata["Repository"] = "https://github.com/mguyard/hass-iopool"  # noqa: SLF001
-        config._metadata["Test Environment"] = "GitHub Actions"  # noqa: SLF001
-        config._metadata["Report Generated"] = datetime.now().strftime(  # noqa: SLF001
+        config._metadata["Repository"] = "https://github.com/mguyard/hass-iopool"
+        config._metadata["Test Environment"] = "GitHub Actions"
+        config._metadata["Report Generated"] = datetime.now().strftime(
             "%Y-%m-%d %H:%M:%S UTC"
         )
 
         # Add CI environment information if available
         if "HA_VERSION" in os.environ:
-            config._metadata["Home Assistant Version"] = os.environ["HA_VERSION"]  # noqa: SLF001
+            config._metadata["Home Assistant Version"] = os.environ["HA_VERSION"]
         if "GITHUB_REF" in os.environ:
-            config._metadata["Git Branch"] = os.environ["GITHUB_REF"].replace(  # noqa: SLF001
+            config._metadata["Git Branch"] = os.environ["GITHUB_REF"].replace(
                 "refs/heads/", ""
             )
         if "GITHUB_SHA" in os.environ:
-            config._metadata["Git Commit"] = os.environ["GITHUB_SHA"][:8]  # noqa: SLF001
+            config._metadata["Git Commit"] = os.environ["GITHUB_SHA"][:8]
 
 
 @pytest.fixture
@@ -54,6 +55,10 @@ def hass():
     # Add required data for Home Assistant components
     hass_mock.data["network"] = MagicMock()
     hass_mock.data["network"].adapters = []
+
+    # Any real hass has a device registry loaded before platforms are set up,
+    # and dr.async_get() raises RuntimeError without it.
+    hass_mock.data[dr.DATA_REGISTRY] = MagicMock(spec=dr.DeviceRegistry)
 
     # Add config with language attribute for sensor tests
     hass_mock.config = MagicMock()

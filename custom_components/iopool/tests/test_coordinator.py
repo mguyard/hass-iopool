@@ -8,7 +8,10 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 from aiohttp.client_exceptions import ClientError, ServerTimeoutError
 from custom_components.iopool.api_models import IopoolAPIResponse
-from custom_components.iopool.coordinator import IopoolDataUpdateCoordinator
+from custom_components.iopool.coordinator import (
+    IopoolDataUpdateCoordinator,
+    obfuscate_api_key,
+)
 import pytest
 
 from homeassistant.core import HomeAssistant
@@ -69,7 +72,7 @@ class TestIopoolDataUpdateCoordinator:
 
         coordinator.session = MockSession()
 
-        result = await coordinator._async_update_data()  # noqa: SLF001
+        result = await coordinator._async_update_data()
         coordinator.data = result
 
         assert coordinator.data is not None
@@ -95,7 +98,7 @@ class TestIopoolDataUpdateCoordinator:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error communicating with API"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
@@ -116,7 +119,7 @@ class TestIopoolDataUpdateCoordinator:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error communicating with API"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     def test_get_pool_data_found(
@@ -226,7 +229,7 @@ class TestIopoolDataUpdateCoordinatorEdgeCases:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error parsing API response"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
@@ -263,7 +266,7 @@ class TestIopoolDataUpdateCoordinatorEdgeCases:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error parsing API response"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
@@ -283,7 +286,7 @@ class TestIopoolDataUpdateCoordinatorEdgeCases:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error communicating with API"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
@@ -316,7 +319,7 @@ class TestIopoolDataUpdateCoordinatorEdgeCases:
 
         coordinator.session = MockSession()
 
-        result = await coordinator._async_update_data()  # noqa: SLF001
+        result = await coordinator._async_update_data()
         assert result is not None
         assert result.pools == []
 
@@ -407,7 +410,7 @@ class TestIopoolDataUpdateCoordinatorIntegration:
         coordinator.session = MockSession()
 
         # Perform update
-        result = await coordinator._async_update_data()  # noqa: SLF001
+        result = await coordinator._async_update_data()
         coordinator.data = result
 
         # Verify data structure
@@ -475,7 +478,7 @@ class TestIopoolDataUpdateCoordinatorIntegration:
         with caplog.at_level(
             logging.DEBUG, logger="custom_components.iopool.coordinator"
         ):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
         # Check that debug messages were logged
         debug_messages = [
@@ -485,6 +488,30 @@ class TestIopoolDataUpdateCoordinatorIntegration:
         ]
         assert any("Updating iopool data with API key" in msg for msg in debug_messages)
         assert any("iopool Response data:" in msg for msg in debug_messages)
+
+        # The API key must never reach the logs in clear: users routinely paste
+        # debug logs into GitHub issues.
+        assert TEST_API_KEY not in caplog.text
+        assert any(f"***{TEST_API_KEY[-4:]}" in msg for msg in debug_messages)
+
+
+class TestObfuscateApiKey:
+    """Test API key masking used in debug logs."""
+
+    @pytest.mark.parametrize(
+        ("api_key", "expected"),
+        [
+            ("test-api-key-12345", "***2345"),
+            ("abcde", "***bcde"),
+            # Too short to reveal anything without exposing most of the key
+            ("abcd", "***"),
+            ("ab", "***"),
+            ("", ""),
+        ],
+    )
+    def test_obfuscate_api_key(self, api_key: str, expected: str) -> None:
+        """Only the last 4 characters are kept, and only if the key is longer."""
+        assert obfuscate_api_key(api_key) == expected
 
 
 class TestIopoolDataUpdateCoordinatorExceptionHandling:
@@ -531,7 +558,7 @@ class TestIopoolDataUpdateCoordinatorExceptionHandling:
         coordinator.session = MockSession()
 
         with pytest.raises(UpdateFailed, match="Error parsing API response"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
     @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
@@ -560,4 +587,4 @@ class TestIopoolDataUpdateCoordinatorExceptionHandling:
 
         # This should not be caught by the coordinator and should propagate
         with pytest.raises(RuntimeError, match="Unexpected error"):
-            await coordinator._async_update_data()  # noqa: SLF001
+            await coordinator._async_update_data()

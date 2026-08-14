@@ -311,13 +311,15 @@ class IopoolSelect(IopoolEntity, SelectEntity):
                 await self._filtration.async_stop_filtration()
                 await self._clean_filtration_attributes_active_slot()
 
-        if self.entity_description.key == SENSOR_POOL_MODE:
-            if self._attr_current_option in {
+        if self.entity_description.key == SENSOR_POOL_MODE and (
+            self._attr_current_option
+            in {
                 "Standard",
                 "Active-Winter",
                 "Passive-Winter",
-            }:
-                self._reload_required = True
+            }
+        ):
+            self._reload_required = True
 
         self.async_write_ha_state()
 

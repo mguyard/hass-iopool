@@ -41,6 +41,10 @@ from .models import IopoolConfigData, IopoolConfigEntry
 
 _LOGGER = logging.getLogger(__name__)
 
+# Summer filtration is split in two slots; the second one is the catch-up slot,
+# whose end time is recomputed from the filtration already elapsed that day.
+SECOND_SLOT = 2
+
 
 class Filtration:
     """Class to handle filtration functionality."""
@@ -312,8 +316,10 @@ class Filtration:
             return None
 
         try:
-            slot_time = datetime.strptime(slot_start, "%H:%M:%S").time()
-            today = datetime.now().date()
+            # Wall-clock time from the user's configuration: a timezone here
+            # would be meaningless, it is anchored to the local day below.
+            slot_time = datetime.strptime(slot_start, "%H:%M:%S").time()  # noqa: DTZ007
+            today = dt_util.now().date()
             return datetime.combine(today, slot_time)
         except ValueError as e:
             _LOGGER.error("Invalid time format for summer slot %d: %s", slot, e)
@@ -353,7 +359,7 @@ class Filtration:
         try:
             # Convert the state to a number
             recommended_duration = int(float(recommendation_state.state))
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             _LOGGER.warning("Filtration recommendation is not a valid number")
             return None
 
@@ -417,7 +423,7 @@ class Filtration:
         try:
             # Convert the state to a string
             pool_mode = str(pool_mode_state.state)
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             _LOGGER.warning("Filtration pool mode is not a valid string")
             return None
 
@@ -441,7 +447,8 @@ class Filtration:
         if not winter_filtration:
             return None
 
-        start_time = datetime.strptime(
+        # Wall-clock time from the user's configuration, see above.
+        start_time = datetime.strptime(  # noqa: DTZ007
             winter_filtration.get(CONF_OPTIONS_FILTRATION_START),
             "%H:%M:%S",
         ).time()
@@ -698,44 +705,46 @@ class Filtration:
 
                 if next_stop_dt and now_local >= next_stop_dt:
                     # Check if active_slot is 2 and if elapsed filtration is enough
-                    if self._active_slot == 2:
-                        if elapsed_filtration_duration_state:
-                            remaining_duration_min = round(
-                                int(
-                                    filtration_attributes.get(
-                                        "filtration_duration_minutes", 0
-                                    )
+                    if (
+                        self._active_slot == SECOND_SLOT
+                        and elapsed_filtration_duration_state
+                    ):
+                        remaining_duration_min = round(
+                            int(
+                                filtration_attributes.get(
+                                    "filtration_duration_minutes", 0
                                 )
-                                - (float(elapsed_filtration_duration_state.state) * 60)
                             )
+                            - (float(elapsed_filtration_duration_state.state) * 60)
+                        )
+                        _LOGGER.info(
+                            "Remaining duration for slot #2 is %s minutes",
+                            remaining_duration_min,
+                        )
+                        if remaining_duration_min > 0:
+                            # Calculate new stop time based on remaining duration
+                            new_stop_time = now_local + timedelta(
+                                minutes=remaining_duration_min
+                            )
+                            # Round to the nearest minute
+                            new_stop_time = new_stop_time.replace(
+                                second=0, microsecond=0
+                            )
+                            # Convert to ISO format for consistency
+                            new_stop_time_iso = new_stop_time.isoformat()
                             _LOGGER.info(
-                                "Remaining duration for slot #2 is %s minutes",
-                                remaining_duration_min,
+                                "Ajusting next stop time based on remaining duration: %s minutes, new stop time: %s (was %s)",
+                                int(remaining_duration_min),
+                                new_stop_time_iso,
+                                next_stop_dt,
                             )
-                            if remaining_duration_min > 0:
-                                # Calculate new stop time based on remaining duration
-                                new_stop_time = now_local + timedelta(
-                                    minutes=remaining_duration_min
-                                )
-                                # Round to the nearest minute
-                                new_stop_time = new_stop_time.replace(
-                                    second=0, microsecond=0
-                                )
-                                # Convert to ISO format for consistency
-                                new_stop_time_iso = new_stop_time.isoformat()
-                                _LOGGER.info(
-                                    "Ajusting next stop time based on remaining duration: %s minutes, new stop time: %s (was %s)",
-                                    int(remaining_duration_min),
-                                    new_stop_time_iso,
-                                    next_stop_dt,
-                                )
 
-                                await self.update_filtration_attributes(
-                                    slot2_end_time=new_stop_time_iso,
-                                    next_stop_time=new_stop_time_iso,
-                                    active_slot=2,
-                                )
-                                return
+                            await self.update_filtration_attributes(
+                                slot2_end_time=new_stop_time_iso,
+                                next_stop_time=new_stop_time_iso,
+                                active_slot=2,
+                            )
+                            return
 
                     _LOGGER.info(
                         "Stopping filtration based on scheduled end time: %s",
@@ -786,13 +795,23 @@ class Filtration:
                     event = None
                     match self._active_slot:
                         case 1:
-                            slot1_start_str = filtration_attributes.get("slot1_start_time")
-                            slot1_start_dt = dt_util.parse_datetime(slot1_start_str) if slot1_start_str else None
+                            slot1_start_str = filtration_attributes.get(
+                                "slot1_start_time"
+                            )
+                            slot1_start_dt = (
+                                dt_util.parse_datetime(slot1_start_str)
+                                if slot1_start_str
+                                else None
+                            )
                             event_type = EVENT_TYPE_SLOT1_END
                             event = {
                                 "start_time": slot1_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int((now - slot1_start_dt).total_seconds() / 60) if slot1_start_dt else 0,
+                                "duration_minutes": int(
+                                    (now - slot1_start_dt).total_seconds() / 60
+                                )
+                                if slot1_start_dt
+                                else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,
@@ -800,13 +819,23 @@ class Filtration:
                                 "day_filtration_elapsed_percent": day_filtration_elapsed_percent,
                             }
                         case 2:
-                            slot2_start_str = filtration_attributes.get("slot2_start_time")
-                            slot2_start_dt = dt_util.parse_datetime(slot2_start_str) if slot2_start_str else None
+                            slot2_start_str = filtration_attributes.get(
+                                "slot2_start_time"
+                            )
+                            slot2_start_dt = (
+                                dt_util.parse_datetime(slot2_start_str)
+                                if slot2_start_str
+                                else None
+                            )
                             event_type = EVENT_TYPE_SLOT2_END
                             event = {
                                 "start_time": slot2_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int((now - slot2_start_dt).total_seconds() / 60) if slot2_start_dt else 0,
+                                "duration_minutes": int(
+                                    (now - slot2_start_dt).total_seconds() / 60
+                                )
+                                if slot2_start_dt
+                                else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,
@@ -814,13 +843,23 @@ class Filtration:
                                 "day_filtration_elapsed_percent": day_filtration_elapsed_percent,
                             }
                         case "winter":
-                            winter_start_str = filtration_attributes.get("winter_filtration_start")
-                            winter_start_dt = dt_util.parse_datetime(winter_start_str) if winter_start_str else None
+                            winter_start_str = filtration_attributes.get(
+                                "winter_filtration_start"
+                            )
+                            winter_start_dt = (
+                                dt_util.parse_datetime(winter_start_str)
+                                if winter_start_str
+                                else None
+                            )
                             event_type = EVENT_TYPE_WINTER_END
                             event = {
                                 "start_time": winter_start_dt,
                                 "end_time": now.isoformat(),
-                                "duration_minutes": int((now - winter_start_dt).total_seconds() / 60) if winter_start_dt else 0,
+                                "duration_minutes": int(
+                                    (now - winter_start_dt).total_seconds() / 60
+                                )
+                                if winter_start_dt
+                                else 0,
                                 "boost_in_progress": boost_state.state,
                                 "remaining_boost_duration_minutes": boost_remaining_duration,
                                 "day_filtration_objective_minutes": day_filtration_objective_minutes,
@@ -1227,8 +1266,8 @@ class Filtration:
                         winter_result := self.get_winter_filtration_start_end()
                     ) is not None:
                         winter_start_time: time
-                        winter_duration: timedelta
-                        winter_start_time, winter_duration = winter_result
+                        _winter_duration: timedelta
+                        winter_start_time, _winter_duration = winter_result
 
                         # Calculate the next executions for logging
                         next_start_run = self.calculate_next_run_datetime(
