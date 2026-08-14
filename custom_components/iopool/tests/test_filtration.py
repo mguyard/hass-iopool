@@ -192,7 +192,11 @@ class TestFiltration:
         with patch.object(
             filtration,
             "get_filtration_attributes",
-            return_value=("binary_sensor.iopool_filtration", mock_state, dict(mock_state.attributes)),
+            return_value=(
+                "binary_sensor.iopool_filtration",
+                mock_state,
+                dict(mock_state.attributes),
+            ),
         ):
             await filtration.update_filtration_attributes(
                 next_stop_time=None,
@@ -776,12 +780,22 @@ class TestFiltration:
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
@@ -810,12 +824,22 @@ class TestFiltration:
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
@@ -843,12 +867,22 @@ class TestFiltration:
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
@@ -871,18 +905,28 @@ class TestFiltration:
         filtration._active_slot = "winter"
         filtration._next_stop_time = now.isoformat()
         filtration_attrs = {
-            "winter_filtration_start": start_str,   # correct key
+            "winter_filtration_start": start_str,  # correct key
             # "winter_start_time" is intentionally absent to confirm only the right key is read
         }
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
@@ -907,17 +951,27 @@ class TestFiltration:
         filtration._next_stop_time = now.isoformat()
         # Only the OLD wrong key present — should not be read
         filtration_attrs = {
-            "winter_start_time": start_dt.isoformat(),   # old wrong key
+            "winter_start_time": start_dt.isoformat(),  # old wrong key
         }
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
@@ -938,16 +992,26 @@ class TestFiltration:
         now = dt_util.now().replace(second=0, microsecond=0)
         filtration._active_slot = "winter"
         filtration._next_stop_time = now.isoformat()
-        filtration_attrs = {}   # no winter_filtration_start at all
+        filtration_attrs = {}  # no winter_filtration_start at all
         _, _, mock_search, mock_get = self._make_check_filtration_mocks(now)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), filtration_attrs
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
             patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,

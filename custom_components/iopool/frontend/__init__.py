@@ -12,7 +12,9 @@ _LOGGER = logging.getLogger(__name__)
 URL_BASE = "/iopool"
 CARD_FILENAME = "iopool-card.js"
 
-_CARD_VERSION = (pathlib.Path(__file__).parent / "iopool-card.version").read_text().strip()
+_CARD_VERSION = (
+    (pathlib.Path(__file__).parent / "iopool-card.version").read_text().strip()
+)
 
 
 def _ha_version_tuple(version_str: str) -> tuple:
@@ -20,7 +22,7 @@ def _ha_version_tuple(version_str: str) -> tuple:
     try:
         parts = version_str.split(".")
         return tuple(int(x) for x in parts[:3])
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return (0, 0, 0)
 
 
@@ -62,7 +64,9 @@ class IopoolCardRegistration:
             await self.hass.http.async_register_static_paths(
                 [StaticPathConfig(URL_BASE, pathlib.Path(__file__).parent, False)]
             )
-            _LOGGER.debug("Registered iopool frontend path from %s", pathlib.Path(__file__).parent)
+            _LOGGER.debug(
+                "Registered iopool frontend path from %s", pathlib.Path(__file__).parent
+            )
         except RuntimeError:
             _LOGGER.debug("iopool frontend static path already registered")
 
@@ -75,7 +79,8 @@ class IopoolCardRegistration:
         await self.lovelace_resources.async_get_info()
 
         existing = [
-            res for res in self.lovelace_resources.async_items()
+            res
+            for res in self.lovelace_resources.async_items()
             if res["url"].startswith(url)
         ]
 
@@ -101,7 +106,7 @@ class IopoolCardRegistration:
         """Extract version from resource URL."""
         try:
             return url.split("?v=")[1]
-        except (IndexError, AttributeError):
+        except IndexError, AttributeError:
             return ""
 
     async def async_unregister(self) -> None:
@@ -111,7 +116,8 @@ class IopoolCardRegistration:
         url = f"{URL_BASE}/{CARD_FILENAME}"
         await self.lovelace_resources.async_get_info()
         resources = [
-            res for res in self.lovelace_resources.async_items()
+            res
+            for res in self.lovelace_resources.async_items()
             if res["url"].startswith(url)
         ]
         for resource in resources:
