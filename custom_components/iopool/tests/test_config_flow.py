@@ -377,9 +377,7 @@ class TestIopoolOptionsFlow:
         filtration_section = next(
             field for field in serialized_schema if field["name"] == "filtration"
         )
-        return {
-            field["name"]: field for field in filtration_section["schema"]
-        }
+        return {field["name"]: field for field in filtration_section["schema"]}
 
     @staticmethod
     def _set_flow_config_entry(flow: IopoolOptionsFlow, options: dict) -> None:
@@ -395,17 +393,21 @@ class TestIopoolOptionsFlow:
         """Test choose_pool step when no pools are available."""
         flow = IopoolConfigFlow()
         flow.hass = hass
-        flow._iopool_data = None  # noqa: SLF001
+        flow._iopool_data = None
 
         result = await flow.async_step_choose_pool()
         assert result["type"] == FlowResultType.ABORT
         assert result["reason"] == "no_pools"
 
     @pytest.mark.asyncio
-    async def test_options_flow_keeps_optional_number_fields_visible_when_none(self) -> None:
+    async def test_options_flow_keeps_optional_number_fields_visible_when_none(
+        self,
+    ) -> None:
         """Test optional number selectors remain present when options are unset."""
         flow = IopoolOptionsFlow()
-        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+        self._set_flow_config_entry(
+            flow, IopoolOptionsData.to_dict(IopoolOptionsData())
+        )
 
         result = await flow.async_step_init()
 
@@ -475,7 +477,9 @@ class TestIopoolOptionsFlow:
     async def test_options_flow_converts_zero_winter_duration_to_none(self) -> None:
         """Test zero winter duration is normalized back to None."""
         flow = IopoolOptionsFlow()
-        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+        self._set_flow_config_entry(
+            flow, IopoolOptionsData.to_dict(IopoolOptionsData())
+        )
 
         result = await flow.async_step_init(
             {
@@ -498,21 +502,32 @@ class TestIopoolOptionsFlow:
         )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
-        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
-            CONF_OPTIONS_FILTRATION_MIN_DURATION
-        ] is None
-        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
-            CONF_OPTIONS_FILTRATION_MAX_DURATION
-        ] is None
-        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_WINTER][
-            CONF_OPTIONS_FILTRATION_DURATION
-        ] is None
+        assert (
+            result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+                CONF_OPTIONS_FILTRATION_MIN_DURATION
+            ]
+            is None
+        )
+        assert (
+            result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+                CONF_OPTIONS_FILTRATION_MAX_DURATION
+            ]
+            is None
+        )
+        assert (
+            result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_WINTER][
+                CONF_OPTIONS_FILTRATION_DURATION
+            ]
+            is None
+        )
 
     @pytest.mark.asyncio
     async def test_options_flow_converts_zero_summer_durations_to_none(self) -> None:
         """Test zero summer durations are normalized back to None."""
         flow = IopoolOptionsFlow()
-        self._set_flow_config_entry(flow, IopoolOptionsData.to_dict(IopoolOptionsData()))
+        self._set_flow_config_entry(
+            flow, IopoolOptionsData.to_dict(IopoolOptionsData())
+        )
 
         result = await flow.async_step_init(
             {
@@ -535,12 +550,18 @@ class TestIopoolOptionsFlow:
         )
 
         assert result["type"] == FlowResultType.CREATE_ENTRY
-        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
-            CONF_OPTIONS_FILTRATION_MIN_DURATION
-        ] is None
-        assert result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
-            CONF_OPTIONS_FILTRATION_MAX_DURATION
-        ] is None
+        assert (
+            result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+                CONF_OPTIONS_FILTRATION_MIN_DURATION
+            ]
+            is None
+        )
+        assert (
+            result["data"][CONF_OPTIONS_FILTRATION][CONF_OPTIONS_FILTRATION_SUMMER][
+                CONF_OPTIONS_FILTRATION_MAX_DURATION
+            ]
+            is None
+        )
 
     @pytest.mark.asyncio
     async def test_choose_pool_no_new_pools(
@@ -550,7 +571,7 @@ class TestIopoolOptionsFlow:
         # Skip device registry test for now since it requires proper Home Assistant setup
         flow = IopoolConfigFlow()
         flow.hass = hass
-        flow._iopool_data = mock_api_response  # noqa: SLF001
+        flow._iopool_data = mock_api_response
 
         # Mock device registry to return existing devices
         with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:
@@ -648,7 +669,7 @@ class TestIopoolOptionsFlow:
         """Test choose_pool step when no pool is selected."""
         flow = IopoolConfigFlow()
         flow.hass = hass
-        flow._iopool_data = mock_api_response  # noqa: SLF001
+        flow._iopool_data = mock_api_response
 
         # Mock device registry to return no existing devices
         with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:
@@ -666,7 +687,7 @@ class TestIopoolOptionsFlow:
         """Test choose_pool step displays form correctly."""
         flow = IopoolConfigFlow()
         flow.hass = hass
-        flow._iopool_data = mock_api_response  # noqa: SLF001
+        flow._iopool_data = mock_api_response
 
         # Mock device registry to return no existing devices
         with patch("homeassistant.helpers.device_registry.async_get") as mock_registry:

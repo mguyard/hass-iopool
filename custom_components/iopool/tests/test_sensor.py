@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from custom_components.iopool.const import SENSOR_ELAPSED_FILTRATION, DOMAIN
+from custom_components.iopool.const import DOMAIN, SENSOR_ELAPSED_FILTRATION
 from custom_components.iopool.sensor import (
     POOL_SENSORS,
     IopoolSensor,
@@ -19,7 +19,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
-from homeassistant.helpers import entity_registry as er
 
 from .conftest import TEST_API_KEY, TEST_POOL_ID, TEST_POOL_TITLE
 
@@ -160,7 +159,9 @@ class TestIopoolSensor:
             ("  Leading Spaces  ", "leading_spaces"),
         ],
     )
-    def test_sensor_entity_id_slugified(self, pool_name: str, expected_id_fragment: str) -> None:
+    def test_sensor_entity_id_slugified(
+        self, pool_name: str, expected_id_fragment: str
+    ) -> None:
         """Test that sensor entity_id is properly slugified from the pool name."""
         mock_coordinator = MagicMock()
         sensor_description = POOL_SENSORS[0]  # Temperature sensor
@@ -171,7 +172,9 @@ class TestIopoolSensor:
             TEST_POOL_ID,
             pool_name,
         )
-        expected_entity_id = f"sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        expected_entity_id = (
+            f"sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        )
         assert sensor.entity_id == expected_entity_id
 
     def test_temperature_sensor_properties(self) -> None:
@@ -370,9 +373,11 @@ class TestAsyncSetupEntryEdgeCases:
         mock_sensor_class.assert_called_once()
         call_kwargs = mock_sensor_class.call_args[1]
         from homeassistant.components.sensor import SensorStateClass
+
         assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
         # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
         from datetime import timedelta
+
         hs_call_kwargs = mock_history_stats.call_args[1]
         assert hs_call_kwargs.get("min_state_duration") == timedelta(0)
         assert mock_async_add_entities.call_count >= 1
@@ -388,33 +393,26 @@ class TestAsyncSetupEntryEdgeCases:
         mock_history_stats,
         mock_coordinator_class,
         mock_template,
-        tmp_path,
+        hass: HomeAssistant,
         caplog: pytest.LogCaptureFixture,
     ) -> None:
-        """Regression test for home-assistant/core#177594 (merged 2026-07-30,
-        shipped in HA 2026.8.0): HistoryStatsSensor.__init__ dropped both
-        `hass` and `source_entity_id`, and made the remaining parameters
-        keyword-only.
+        """Build a real HistoryStatsSensor and check it is wired to the device.
 
-        Unlike test_async_setup_entry_with_switch_entity above, this test
-        does NOT patch HistoryStatsSensor itself. Constructing it for real is
-        the whole point: a mocked class accepts any kwargs, so it can never
-        catch a TypeError raised by a real, incompatible __init__ signature
-        -- which is exactly why the earlier test kept passing while the
+        Regression test for home-assistant/core#177594 (shipped in HA 2026.8.0),
+        which dropped both `hass` and `source_entity_id` from
+        HistoryStatsSensor.__init__, made the remaining parameters keyword-only,
+        and moved device resolution to the caller.
+
+        Unlike test_async_setup_entry_with_switch_entity above, this test does
+        NOT patch HistoryStatsSensor itself. Constructing it for real is the
+        whole point: a mocked class accepts any kwargs, so it can never catch a
+        TypeError raised by an incompatible __init__ signature -- which is
+        exactly why the mocked test kept passing while the
         elapsed_filtration_duration sensor silently failed to appear on HA
         2026.8+ (async_setup_entry swallows the TypeError via its
         `except (ValueError, KeyError, TypeError)` clause and only logs it).
-
-        Also uses a real `homeassistant.core.HomeAssistant` instance with
-        device/entity registries loaded, not the MagicMock `hass` fixture
-        from conftest.py, since the fix's `device=` fallback (for HA 2026.8+)
-        calls the real `async_entity_id_to_device`, which needs a real
-        registry to query.
         """
-        real_hass = HomeAssistant(str(tmp_path))
-        real_hass.data[dr.DATA_REGISTRY] = dr.DeviceRegistry(real_hass)
-        await dr.async_load(real_hass, load_empty=True)
-        await er.async_load(real_hass, load_empty=True)
+        hass.config.language = "en"
 
         config_entry = ConfigEntry(
             version=1,
@@ -455,9 +453,14 @@ class TestAsyncSetupEntryEdgeCases:
         )
         mock_coordinator_class.return_value = mock_history_coordinator
 
+        # The pool device the history_stats sensor must be attached to
+        device_registry = dr.async_get(hass)
+        pool_device = MagicMock()
+        device_registry.async_get_device.return_value = pool_device
+
         mock_async_add_entities = MagicMock()
 
-        await async_setup_entry(real_hass, config_entry, mock_async_add_entities)
+        await async_setup_entry(hass, config_entry, mock_async_add_entities)
 
         assert "Failed to set up history_stats sensor" not in caplog.text
 
@@ -474,6 +477,12 @@ class TestAsyncSetupEntryEdgeCases:
             history_stats_entity.unique_id
             == f"{config_entry.entry_id}_{TEST_POOL_ID}_{SENSOR_ELAPSED_FILTRATION}"
         )
+        # Since HA 2026.8 resolving the device is the caller's job, so the
+        # grouping under the pool device is ours to get right, not core's.
+        device_registry.async_get_device.assert_called_once_with(
+            identifiers={(DOMAIN, TEST_POOL_ID)}
+        )
+        assert history_stats_entity.device_entry is pool_device
 
     @pytest.mark.asyncio
     @patch("homeassistant.helpers.template.Template")
@@ -553,9 +562,11 @@ class TestAsyncSetupEntryEdgeCases:
         mock_sensor_class.assert_called_once()
         call_kwargs = mock_sensor_class.call_args[1]
         from homeassistant.components.sensor import SensorStateClass
+
         assert call_kwargs.get("state_class") == SensorStateClass.MEASUREMENT
         # Verify HistoryStats was called with min_state_duration=timedelta(0) (required since HA 2026.4)
         from datetime import timedelta
+
         hs_call_kwargs = mock_history_stats.call_args[1]
         assert hs_call_kwargs.get("min_state_duration") == timedelta(0)
         assert mock_async_add_entities.call_count >= 1

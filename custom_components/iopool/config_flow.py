@@ -5,7 +5,8 @@ from __future__ import annotations
 from copy import deepcopy
 from dataclasses import asdict, dataclass
 from datetime import timedelta
-from enum import Enum
+from enum import StrEnum
+from http import HTTPStatus
 import logging
 from typing import Any
 
@@ -45,6 +46,10 @@ from .models import IopoolConfigEntry, IopoolOptionsData
 
 _LOGGER = logging.getLogger(__name__)
 
+# Slot 1 and slot 2 durations are percentages of the daily filtration time,
+# so together they cannot exceed the whole day.
+MAX_TOTAL_DURATION_PERCENT = 100
+
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_API_KEY): str,
@@ -57,7 +62,7 @@ def _optional_number_selector_default(value: int | None) -> int:
     return 0 if value is None else value
 
 
-class ApiKeyValidationResult(str, Enum):
+class ApiKeyValidationResult(StrEnum):
     """Result of API key validation."""
 
     SUCCESS = "success"
@@ -109,12 +114,12 @@ async def get_iopool_data(hass: HomeAssistant, api_key: str) -> GetIopoolDataRes
 
     try:
         async with session.get(POOLS_ENDPOINT, headers=headers) as response:
-            if response.status == 200:
+            if response.status == HTTPStatus.OK:
                 data = await response.json()
                 result.result_code = ApiKeyValidationResult.SUCCESS
                 result.result_data = IopoolAPIResponse.from_dict(data)
                 return result
-            if response.status in (401, 403):  # Unauthorized or Forbidden
+            if response.status in (HTTPStatus.UNAUTHORIZED, HTTPStatus.FORBIDDEN):
                 _LOGGER.error(
                     "API key validation failed with status: %s", response.status
                 )
@@ -401,7 +406,7 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 if (
                     options_returned.filtration.summer_filtration.slot1.duration_percent
                     + options_returned.filtration.summer_filtration.slot2.duration_percent
-                    > 100
+                    > MAX_TOTAL_DURATION_PERCENT
                 ):
                     errors["filtration"] = (
                         "slot1_and_slot2_duration_percent_greater_than_100"
@@ -436,7 +441,7 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
                 )
 
         # Define the schema for "Filtration" options
-        OPTIONS_FILTRATION = vol.Schema(
+        options_filtration = vol.Schema(
             {
                 # Global Filtration options
                 vol.Optional(
@@ -569,10 +574,10 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
         )
 
         # Define the schema for the options form
-        STEP_OPTIONS = vol.Schema(
+        step_options = vol.Schema(
             {
                 vol.Required("filtration"): section(
-                    OPTIONS_FILTRATION,
+                    options_filtration,
                     {"collapsed": True},
                 ),
             }
@@ -580,7 +585,7 @@ class IopoolOptionsFlow(config_entries.OptionsFlow):
 
         return self.async_show_form(
             step_id="init",
-            data_schema=STEP_OPTIONS,
+            data_schema=step_options,
             errors=errors or {},
             last_step=True,
         )

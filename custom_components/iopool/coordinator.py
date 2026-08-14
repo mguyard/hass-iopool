@@ -16,6 +16,22 @@ from .const import DEFAULT_SCAN_INTERVAL, DOMAIN, POOLS_ENDPOINT
 
 _LOGGER = logging.getLogger(__name__)
 
+# Number of trailing API key characters kept visible in debug logs
+VISIBLE_API_KEY_CHARS = 4
+
+
+def obfuscate_api_key(api_key: str) -> str:
+    """Mask an API key for logging, keeping only its last 4 characters.
+
+    Enough to let a user confirm which key is in use when reading debug logs,
+    without exposing the key itself in logs that often get pasted into issues.
+    """
+    if not api_key:
+        return ""
+    if len(api_key) <= VISIBLE_API_KEY_CHARS:
+        return "***"
+    return f"***{api_key[-VISIBLE_API_KEY_CHARS:]}"
+
 
 class IopoolDataUpdateCoordinator(DataUpdateCoordinator):
     """Coordinator to manage data updates for iopool devices."""
@@ -58,7 +74,9 @@ class IopoolDataUpdateCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self) -> IopoolAPIResponse:
         """Fetch data from iopool API."""
-        _LOGGER.debug("Updating iopool data with API key %s", self.api_key)
+        _LOGGER.debug(
+            "Updating iopool data with API key %s", obfuscate_api_key(self.api_key)
+        )
         try:
             async with self.session.get(
                 POOLS_ENDPOINT, headers=self.headers

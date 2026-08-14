@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-import inspect
 import logging
 from typing import Any
 
@@ -15,6 +14,7 @@ from homeassistant.components.sensor import (
 )
 from homeassistant.const import UnitOfTemperature, UnitOfTime
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import device_registry as dr
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
@@ -25,6 +25,7 @@ from .const import (
     ATTR_MEASURED_AT,
     CONF_OPTIONS_FILTRATION_SWITCH_ENTITY,
     CONF_POOL_ID,
+    DOMAIN,
     SENSOR_ELAPSED_FILTRATION,
     SENSOR_FILTRATION_RECOMMENDATION,
     SENSOR_IOPOOL_MODE,
@@ -131,7 +132,6 @@ async def async_setup_entry(
         )
         from homeassistant.components.history_stats.data import HistoryStats
         from homeassistant.components.history_stats.sensor import HistoryStatsSensor
-        from homeassistant.helpers.device import async_entity_id_to_device
         from homeassistant.helpers.template import Template
 
         start_template = Template(
@@ -141,14 +141,14 @@ async def async_setup_entry(
         end_template = Template("{{ now().isoformat() }}", hass)
 
         # Create a friendly name for the sensor based on the pool title and language
-        FRIENDLY_NAMES = {
+        friendly_names = {
             "en": "{pool} Elapsed Filtration Duration Today",
             "fr": "{pool} Durée de filtration écoulée aujourd'hui",
             # Add more languages as needed
         }
         ha_language = hass.config.language
-        template = FRIENDLY_NAMES.get(
-            ha_language, FRIENDLY_NAMES["en"]
+        template = friendly_names.get(
+            ha_language, friendly_names["en"]
         )  # Fallback to English if not found
         friendly_name = template.format(pool=pool.title)
 
@@ -172,39 +172,23 @@ async def async_setup_entry(
         try:
             # Ensure the coordinator is initialized
             await coordinator.async_config_entry_first_refresh()
-            # Create the sensor with the coordinator
-            history_stats_source_entity_id = (
-                f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_TEMPERATURE}"
+            # Since HA 2026.8 (home-assistant/core#177594) HistoryStatsSensor no
+            # longer resolves its own device: the caller passes a pre-computed
+            # one. Looking the device up by its identifiers rather than by the
+            # temperature sensor's entity_id keeps the grouping working even if
+            # the user renames that entity.
+            device = dr.async_get(hass).async_get_device(
+                identifiers={(DOMAIN, pool_id)}
             )
-            history_stats_kwargs: dict[str, Any] = {
-                "coordinator": coordinator,
-                "sensor_type": CONF_TYPE_TIME,
-                "name": friendly_name,
-                "unique_id": f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
-                "state_class": SensorStateClass.MEASUREMENT,
-            }
-            # HA 2026.8 (home-assistant/core#177594, merged 2026-07-30) removed
-            # both `hass` and `source_entity_id` from HistoryStatsSensor.__init__
-            # and made every remaining parameter keyword-only, replacing them
-            # with a pre-computed `device` kwarg. This isn't in HA's official
-            # breaking-changes list, since the class is considered internal
-            # API. Only pass the parameters the installed
-            # HistoryStatsSensor.__init__ actually accepts, so this keeps
-            # working before and after that change, without pinning a version.
-            history_stats_params = inspect.signature(
-                HistoryStatsSensor.__init__
-            ).parameters
-            if "hass" in history_stats_params:
-                history_stats_kwargs["hass"] = hass
-            if "source_entity_id" in history_stats_params:
-                history_stats_kwargs["source_entity_id"] = (
-                    history_stats_source_entity_id
-                )
-            elif "device" in history_stats_params:
-                history_stats_kwargs["device"] = async_entity_id_to_device(
-                    hass, history_stats_source_entity_id
-                )
-            history_stats_entity = HistoryStatsSensor(**history_stats_kwargs)
+            # Create the sensor with the coordinator
+            history_stats_entity = HistoryStatsSensor(
+                coordinator=coordinator,
+                sensor_type=CONF_TYPE_TIME,
+                name=friendly_name,
+                unique_id=f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
+                state_class=SensorStateClass.MEASUREMENT,
+                device=device,
+            )
             history_stats_entity.entity_id = f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_ELAPSED_FILTRATION}"
             # Add the entity to Home Assistant
             async_add_entities([history_stats_entity])
@@ -263,7 +247,7 @@ class IopoolSensor(IopoolEntity, SensorEntity):
                 if pool.advice and pool.advice.filtration_duration is not None:
                     value = pool.advice.filtration_duration * 60
             case "iopool_mode":
-                value = pool.mode if pool.mode else None
+                value = pool.mode or None
             case _:
                 value = None
 

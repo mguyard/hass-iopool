@@ -188,7 +188,9 @@ class TestIopoolBinarySensor:
             TEST_POOL_ID,
             pool_name,
         )
-        expected_entity_id = f"binary_sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        expected_entity_id = (
+            f"binary_sensor.iopool_{expected_id_fragment}_{sensor_description.key}"
+        )
         assert sensor.entity_id == expected_entity_id
 
     def test_action_required_sensor_properties(

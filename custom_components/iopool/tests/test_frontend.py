@@ -4,15 +4,14 @@ from __future__ import annotations
 
 from unittest.mock import AsyncMock, MagicMock, patch
 
-import pytest
-
 from custom_components.iopool.frontend import (
-    CARD_FILENAME,
     _CARD_VERSION,
+    CARD_FILENAME,
     URL_BASE,
     IopoolCardRegistration,
     _ha_version_tuple,
 )
+import pytest
 
 
 class TestHaVersionTuple:
@@ -165,7 +164,9 @@ class TestIopoolCardRegistration:
     async def test_async_register_path_already_registered(self):
         """Test that RuntimeError on static path registration is silently ignored."""
         hass, _ = self._make_hass()
-        hass.http.async_register_static_paths = AsyncMock(side_effect=RuntimeError("already registered"))
+        hass.http.async_register_static_paths = AsyncMock(
+            side_effect=RuntimeError("already registered")
+        )
         reg = IopoolCardRegistration(hass)
 
         with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
@@ -179,9 +180,11 @@ class TestIopoolCardRegistration:
         mock_resources.async_items.return_value = []
         reg = IopoolCardRegistration(hass)
 
-        with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
-            with patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"):
-                await reg._async_register_card()
+        with (
+            patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)),
+            patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"),
+        ):
+            await reg._async_register_card()
 
         mock_resources.async_get_info.assert_called_once()
         mock_resources.async_create_item.assert_called_once_with(
@@ -194,12 +197,16 @@ class TestIopoolCardRegistration:
         """Test card registration updates an existing resource with a different version."""
         hass, mock_resources = self._make_hass()
         existing_url = f"{URL_BASE}/{CARD_FILENAME}?v=1.0.0"
-        mock_resources.async_items.return_value = [{"id": "res-id-1", "url": existing_url}]
+        mock_resources.async_items.return_value = [
+            {"id": "res-id-1", "url": existing_url}
+        ]
         reg = IopoolCardRegistration(hass)
 
-        with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
-            with patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"):
-                await reg._async_register_card()
+        with (
+            patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)),
+            patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"),
+        ):
+            await reg._async_register_card()
 
         mock_resources.async_get_info.assert_called_once()
         mock_resources.async_update_item.assert_called_once_with(
@@ -213,12 +220,16 @@ class TestIopoolCardRegistration:
         """Test card registration is skipped when version is already current."""
         hass, mock_resources = self._make_hass()
         existing_url = f"{URL_BASE}/{CARD_FILENAME}?v=1.2.3"
-        mock_resources.async_items.return_value = [{"id": "res-id-1", "url": existing_url}]
+        mock_resources.async_items.return_value = [
+            {"id": "res-id-1", "url": existing_url}
+        ]
         reg = IopoolCardRegistration(hass)
 
-        with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
-            with patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"):
-                await reg._async_register_card()
+        with (
+            patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)),
+            patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"),
+        ):
+            await reg._async_register_card()
 
         mock_resources.async_get_info.assert_called_once()
         mock_resources.async_update_item.assert_not_called()
@@ -227,15 +238,17 @@ class TestIopoolCardRegistration:
     @pytest.mark.asyncio
     async def test_async_register_skips_card_in_yaml_mode(self):
         """Test that card resource is NOT registered when lovelace is in yaml mode."""
-        hass, mock_resources = self._make_hass(mode="yaml")
+        hass, _mock_resources = self._make_hass(mode="yaml")
         reg = IopoolCardRegistration(hass)
 
-        with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
-            with patch.object(reg, "_async_register_path", new=AsyncMock()) as mock_path:
-                with patch.object(reg, "_async_register_card", new=AsyncMock()) as mock_card:
-                    await reg.async_register()
-                    mock_path.assert_called_once()
-                    mock_card.assert_not_called()
+        with (
+            patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)),
+            patch.object(reg, "_async_register_path", new=AsyncMock()) as mock_path,
+            patch.object(reg, "_async_register_card", new=AsyncMock()) as mock_card,
+        ):
+            await reg.async_register()
+            mock_path.assert_called_once()
+            mock_card.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_async_register_full_flow_storage_mode(self):
@@ -244,9 +257,11 @@ class TestIopoolCardRegistration:
         mock_resources.async_items.return_value = []
         reg = IopoolCardRegistration(hass)
 
-        with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
-            with patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"):
-                await reg.async_register()
+        with (
+            patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)),
+            patch("custom_components.iopool.frontend._CARD_VERSION", "1.2.3"),
+        ):
+            await reg.async_register()
 
         hass.http.async_register_static_paths.assert_called_once()
         mock_resources.async_get_info.assert_called_once()
@@ -257,7 +272,9 @@ class TestIopoolCardRegistration:
         """Test that async_unregister removes all matching resources in storage mode."""
         hass, mock_resources = self._make_hass(mode="storage")
         existing_url = f"{URL_BASE}/{CARD_FILENAME}?v=1.2.3"
-        mock_resources.async_items.return_value = [{"id": "res-id-1", "url": existing_url}]
+        mock_resources.async_items.return_value = [
+            {"id": "res-id-1", "url": existing_url}
+        ]
         reg = IopoolCardRegistration(hass)
 
         with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):
@@ -282,7 +299,9 @@ class TestIopoolCardRegistration:
     async def test_async_unregister_no_matching_resources(self):
         """Test that async_unregister does nothing when no matching resources exist."""
         hass, mock_resources = self._make_hass(mode="storage")
-        mock_resources.async_items.return_value = [{"id": "other-id", "url": "/other/card.js"}]
+        mock_resources.async_items.return_value = [
+            {"id": "other-id", "url": "/other/card.js"}
+        ]
         reg = IopoolCardRegistration(hass)
 
         with patch("custom_components.iopool.frontend._HA_VERSION", (2026, 2, 0)):

@@ -118,7 +118,7 @@ class IopoolOptionsData:
             try:
                 hour, minute, second = map(int, time_str.split(":"))
                 return time(hour, minute, second)
-            except (ValueError, AttributeError):
+            except ValueError, AttributeError:
                 return None
 
         def parse_duration(minutes: int | None) -> timedelta | None:
@@ -249,7 +249,7 @@ class IopoolOptionsData:
             try:
                 hour, minute, second = map(int, time_str.split(":"))
                 return time(hour, minute, second)
-            except (ValueError, AttributeError):
+            except ValueError, AttributeError:
                 return None
 
         def safe_int(value) -> int | None:
@@ -258,7 +258,7 @@ class IopoolOptionsData:
                 return None
             try:
                 return int(value)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 return None
 
         # Create slot objects

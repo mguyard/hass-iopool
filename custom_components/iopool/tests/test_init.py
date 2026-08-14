@@ -219,7 +219,9 @@ class TestIntegrationInit:
                 "custom_components.iopool.IopoolDataUpdateCoordinator"
             ) as mock_coordinator_class,
             patch("custom_components.iopool.Filtration") as mock_filtration_class,
-            patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class,
+            patch(
+                "custom_components.iopool.IopoolCardRegistration"
+            ) as mock_card_registration_class,
         ):
             mock_coordinator = AsyncMock()
             mock_coordinator.async_config_entry_first_refresh = AsyncMock()
@@ -287,7 +289,9 @@ class TestIntegrationInit:
                 "custom_components.iopool.IopoolDataUpdateCoordinator"
             ) as mock_coordinator_class,
             patch("custom_components.iopool.Filtration") as mock_filtration_class,
-            patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class,
+            patch(
+                "custom_components.iopool.IopoolCardRegistration"
+            ) as mock_card_registration_class,
         ):
             mock_coordinator = AsyncMock()
             mock_coordinator.async_config_entry_first_refresh = AsyncMock()
@@ -349,7 +353,9 @@ class TestIntegrationInit:
 
     @pytest.mark.asyncio
     @patch("custom_components.iopool.IopoolCardRegistration")
-    async def test_async_unload_entry_success(self, mock_card_registration_class, hass: HomeAssistant) -> None:
+    async def test_async_unload_entry_success(
+        self, mock_card_registration_class, hass: HomeAssistant
+    ) -> None:
         """Test successful unloading of config entry."""
         config_entry = ConfigEntry(
             version=1,
@@ -706,7 +712,9 @@ class TestIntegrationInit:
 
         hass.config_entries.async_unload_platforms = AsyncMock(return_value=False)
 
-        with patch("custom_components.iopool.IopoolCardRegistration") as mock_card_registration_class:
+        with patch(
+            "custom_components.iopool.IopoolCardRegistration"
+        ) as mock_card_registration_class:
             result = await async_unload_entry(hass, config_entry)
 
         assert result is False
