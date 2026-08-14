@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timedelta
+import inspect
 import logging
 from typing import Any
 
@@ -130,6 +131,7 @@ async def async_setup_entry(
         )
         from homeassistant.components.history_stats.data import HistoryStats
         from homeassistant.components.history_stats.sensor import HistoryStatsSensor
+        from homeassistant.helpers.device import async_entity_id_to_device
         from homeassistant.helpers.template import Template
 
         start_template = Template(
@@ -171,15 +173,38 @@ async def async_setup_entry(
             # Ensure the coordinator is initialized
             await coordinator.async_config_entry_first_refresh()
             # Create the sensor with the coordinator
-            history_stats_entity = HistoryStatsSensor(
-                hass=hass,
-                coordinator=coordinator,
-                sensor_type=CONF_TYPE_TIME,
-                name=friendly_name,
-                unique_id=f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
-                source_entity_id=f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_TEMPERATURE}",
-                state_class=SensorStateClass.MEASUREMENT,
+            history_stats_source_entity_id = (
+                f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_TEMPERATURE}"
             )
+            history_stats_kwargs: dict[str, Any] = {
+                "coordinator": coordinator,
+                "sensor_type": CONF_TYPE_TIME,
+                "name": friendly_name,
+                "unique_id": f"{entry.entry_id}_{pool_id}_{SENSOR_ELAPSED_FILTRATION}",
+                "state_class": SensorStateClass.MEASUREMENT,
+            }
+            # HA 2026.8 (home-assistant/core#177594, merged 2026-07-30) removed
+            # both `hass` and `source_entity_id` from HistoryStatsSensor.__init__
+            # and made every remaining parameter keyword-only, replacing them
+            # with a pre-computed `device` kwarg. This isn't in HA's official
+            # breaking-changes list, since the class is considered internal
+            # API. Only pass the parameters the installed
+            # HistoryStatsSensor.__init__ actually accepts, so this keeps
+            # working before and after that change, without pinning a version.
+            history_stats_params = inspect.signature(
+                HistoryStatsSensor.__init__
+            ).parameters
+            if "hass" in history_stats_params:
+                history_stats_kwargs["hass"] = hass
+            if "source_entity_id" in history_stats_params:
+                history_stats_kwargs["source_entity_id"] = (
+                    history_stats_source_entity_id
+                )
+            elif "device" in history_stats_params:
+                history_stats_kwargs["device"] = async_entity_id_to_device(
+                    hass, history_stats_source_entity_id
+                )
+            history_stats_entity = HistoryStatsSensor(**history_stats_kwargs)
             history_stats_entity.entity_id = f"sensor.iopool_{slugify_pool_name(pool.title)}_{SENSOR_ELAPSED_FILTRATION}"
             # Add the entity to Home Assistant
             async_add_entities([history_stats_entity])
