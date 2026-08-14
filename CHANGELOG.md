@@ -1,3 +1,16 @@
+## [1.3.2-beta.3](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.2...v1.3.2-beta.3) (2026-08-14)
+
+### 🐛 Bug Fixes
+
+* **coordinator:** 🐛 Obfuscate the API key in debug logs ([2752e1b](https://github.com/mguyard/hass-iopool/commit/2752e1b934ff52f98e28b32fe0ddcb4fdb59bbc6))
+* **filtration:** 🐛 Use the Home Assistant timezone for today ([c57d3c3](https://github.com/mguyard/hass-iopool/commit/c57d3c32966c07830750db8cb4843e526aa987f6))
+* **sensor:** 🐛 Stop dropping the history_stats sensor on HA 2026.8 ([#99](https://github.com/mguyard/hass-iopool/issues/99)) ([1d7a252](https://github.com/mguyard/hass-iopool/commit/1d7a2521649fc7bebaa48ef59093698f10efe25a)), closes [home-assistant/core#177594](https://github.com/home-assistant/core/issues/177594)
+
+### ♻️ Code Refactoring
+
+* **sensor:** ♻️ Drop the HistoryStatsSensor compat shim ([ec35c2a](https://github.com/mguyard/hass-iopool/commit/ec35c2abfa4210e79f546b5e6ab346d4d11534fb)), closes [#99](https://github.com/mguyard/hass-iopool/issues/99)
+* **sensor:** ♻️ Implement the elapsed filtration sensor natively ([78600ad](https://github.com/mguyard/hass-iopool/commit/78600ad08e71551e33699b219e66afdc421b61fd)), closes [57/#58](https://github.com/57/hass-iopool/issues/58) [#99](https://github.com/mguyard/hass-iopool/issues/99) [#177594](https://github.com/mguyard/hass-iopool/issues/177594) [#178666](https://github.com/mguyard/hass-iopool/issues/178666) [#101](https://github.com/mguyard/hass-iopool/issues/101)
+
 ## [1.3.2-beta.2](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.1...v1.3.2-beta.2) (2026-07-29)
 
 
