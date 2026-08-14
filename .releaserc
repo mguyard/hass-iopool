@@ -6,9 +6,114 @@
             "prerelease": true
         }
     ],
+    "preset": "conventionalcommits",
     "plugins": [
-        "@semantic-release/commit-analyzer",
-        "@semantic-release/release-notes-generator",
+        [
+            "@semantic-release/commit-analyzer",
+            {
+                "presetConfig": {
+                    "types": [
+                        {
+                            "type": "feat",
+                            "section": "✨ Features"
+                        },
+                        {
+                            "type": "fix",
+                            "section": "🐛 Bug Fixes"
+                        },
+                        {
+                            "type": "perf",
+                            "section": "⚡ Performance Improvements"
+                        },
+                        {
+                            "type": "refactor",
+                            "section": "♻️ Code Refactoring"
+                        },
+                        {
+                            "type": "revert",
+                            "section": "⏪ Reverts"
+                        },
+                        {
+                            "type": "docs",
+                            "hidden": true
+                        },
+                        {
+                            "type": "style",
+                            "hidden": true
+                        },
+                        {
+                            "type": "test",
+                            "hidden": true
+                        },
+                        {
+                            "type": "build",
+                            "hidden": true
+                        },
+                        {
+                            "type": "ci",
+                            "hidden": true
+                        },
+                        {
+                            "type": "chore",
+                            "hidden": true
+                        }
+                    ]
+                }
+            }
+        ],
+        [
+            "@semantic-release/release-notes-generator",
+            {
+                "presetConfig": {
+                    "types": [
+                        {
+                            "type": "feat",
+                            "section": "✨ Features"
+                        },
+                        {
+                            "type": "fix",
+                            "section": "🐛 Bug Fixes"
+                        },
+                        {
+                            "type": "perf",
+                            "section": "⚡ Performance Improvements"
+                        },
+                        {
+                            "type": "refactor",
+                            "section": "♻️ Code Refactoring"
+                        },
+                        {
+                            "type": "revert",
+                            "section": "⏪ Reverts"
+                        },
+                        {
+                            "type": "docs",
+                            "hidden": true
+                        },
+                        {
+                            "type": "style",
+                            "hidden": true
+                        },
+                        {
+                            "type": "test",
+                            "hidden": true
+                        },
+                        {
+                            "type": "build",
+                            "hidden": true
+                        },
+                        {
+                            "type": "ci",
+                            "hidden": true
+                        },
+                        {
+                            "type": "chore",
+                            "hidden": true
+                        }
+                    ]
+                }
+            }
+        ],
         [
             "@semantic-release/changelog",
             {
@@ -18,13 +123,15 @@
         [
             "semantic-release-replace-plugin",
             {
-              "replacements": [
-                {
-                  "files": ["custom_components/iopool/manifest.json"],
-                  "from": "\"version\": \".*\"",
-                  "to": "\"version\": \"${nextRelease.version}\""
-                }
-              ]
+                "replacements": [
+                    {
+                        "files": [
+                            "custom_components/iopool/manifest.json"
+                        ],
+                        "from": "\"version\": \".*\"",
+                        "to": "\"version\": \"${nextRelease.version}\""
+                    }
+                ]
             }
         ],
         "@semantic-release/github",
