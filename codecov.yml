@@ -1,0 +1,21 @@
+---
+# Coverage policy for the iopool integration.
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        # Fixed rather than `auto`. An `auto` target holds every changed line
+        # to the project average, which a formatting-only change cannot meet
+        # as soon as it reflows pre-existing untested code -- the reformatted
+        # lines are reported as new and uncovered.
+        target: 80%
+
+# The test suite must not be measured as if it were production code. Without
+# this, `--cov=custom_components/iopool` also reports on the tests themselves.
+ignore:
+  - "custom_components/iopool/tests/**"
