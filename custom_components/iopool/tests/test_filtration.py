@@ -18,6 +18,7 @@ from custom_components.iopool.const import (
     CONF_OPTIONS_FILTRATION_WINTER,
     DOMAIN,
     EVENT_TYPE_SLOT1_END,
+    EVENT_TYPE_SLOT2_END,
     EVENT_TYPE_WINTER_END,
 )
 from custom_components.iopool.filtration import Filtration
@@ -1023,3 +1024,231 @@ class TestFiltration:
         event_payload = mock_publish.call_args[0][1]
         assert event_payload["duration_minutes"] == 0
         assert event_payload["start_time"] is None
+
+
+    # ---------------------------------------------------------------------------
+    # check_filtration_status — slot 2 summer catch-up branch (#103)
+    # ---------------------------------------------------------------------------
+
+    def _make_catchup_mocks(self, elapsed_hours: float | str | None):
+        """Mocks with an elapsed-filtration sensor, in addition to switch/boost."""
+        switch_state = MagicMock()
+        switch_state.state = "on"
+        boost_state = MagicMock()
+        boost_state.state = "none"
+        boost_state.attributes = {}
+        elapsed_state = None
+        if elapsed_hours is not None:
+            elapsed_state = MagicMock()
+            elapsed_state.state = str(elapsed_hours)
+
+        def mock_search(platform, pattern):
+            if "boost" in pattern:
+                return "select.boost_selector"
+            if "elapsed_filtration_duration" in pattern:
+                return "sensor.elapsed" if elapsed_state is not None else None
+            return None
+
+        def mock_get(eid):
+            if eid == "switch.pool_pump":
+                return switch_state
+            if eid == "select.boost_selector":
+                return boost_state
+            if eid == "sensor.elapsed":
+                return elapsed_state
+            return None
+
+        return mock_search, mock_get
+
+    async def test_slot2_catchup_pushes_back_stop_time_when_time_is_owed(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """active_slot 2, quota not yet met: push the stop time back, don't stop."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        # 90 elapsed minutes against a 120-minute objective: 30 owed.
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=90 / 60)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_not_called()
+        mock_publish.assert_not_called()
+        mock_update.assert_called_once()
+        kwargs = mock_update.call_args.kwargs
+        assert kwargs["active_slot"] == 2
+        expected_stop = (now + timedelta(minutes=30)).replace(second=0, microsecond=0)
+        assert kwargs["next_stop_time"] == expected_stop.isoformat()
+        assert kwargs["slot2_end_time"] == expected_stop.isoformat()
+
+    async def test_slot2_catchup_stops_normally_once_quota_is_met(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """active_slot 2, quota already met: falls through to the normal stop."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        # 120 elapsed minutes against a 120-minute objective: nothing owed.
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=120 / 60)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT2_END
+
+    async def test_slot1_never_enters_the_catchup_branch(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """active_slot 1: the slot-2-only catch-up branch must not engage.
+
+        Even with an elapsed-duration sensor present and quota unmet, slot 1
+        stops on schedule -- the catch-up rule is specific to slot 2.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=10 / 60)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT1_END
+
+    async def test_slot2_catchup_with_missing_sensor_stops_normally(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """active_slot 2, elapsed-duration sensor entity not found at all.
+
+        `elapsed_filtration_duration_state` is `None`, which is falsy, so the
+        catch-up branch's body never runs and this falls through to a normal
+        stop -- distinct from the sensor existing but reading "unavailable",
+        which does not short-circuit the same way (see the next test).
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=None)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+
+    @pytest.mark.parametrize("special_state", ["unavailable", "unknown"])
+    async def test_slot2_catchup_with_special_sensor_state_stops_normally(
+        self, filtration: Filtration, mock_coordinator: MagicMock, special_state: str
+    ) -> None:
+        """active_slot 2, elapsed-duration sensor reads a special HA state.
+
+        The State object is truthy in both cases, so neither can be conflated
+        with the sensor being absent (previous test): float() would raise on
+        either string, and the pump must still stop rather than silently
+        running past its scheduled slot 2 end because of it.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=special_state)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+
+    async def test_slot2_catchup_boundary_rounds_to_zero_falls_through_to_stop(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """remaining_duration_min rounds to exactly 0 at the boundary.
+
+        `round(...) > 0` is the guard, so a remainder that rounds to zero
+        (here: 0.4 real minutes owed) must stop normally, not push back by
+        zero minutes.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        # 119.6 elapsed minutes against 120: 0.4 owed, rounds to 0.
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=119.6 / 60)
+
+        with (
+            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(filtration, "get_filtration_attributes", return_value=(
+                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
+            )),
+            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+        mock_update.assert_called_once()
+        # The only update call here is the trailing next_stop_time/active_slot
+        # clear, not a slot2_end_time push-back.
+        assert "slot2_end_time" not in mock_update.call_args.kwargs
