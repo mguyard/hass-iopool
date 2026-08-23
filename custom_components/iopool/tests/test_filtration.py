@@ -1025,13 +1025,12 @@ class TestFiltration:
         assert event_payload["duration_minutes"] == 0
         assert event_payload["start_time"] is None
 
-
     # ---------------------------------------------------------------------------
     # check_filtration_status — slot 2 summer catch-up branch (#103)
     # ---------------------------------------------------------------------------
 
     def _make_catchup_mocks(self, elapsed_hours: float | str | None):
-        """Mocks with an elapsed-filtration sensor, in addition to switch/boost."""
+        """Build mocks with an elapsed-filtration sensor, in addition to switch/boost."""
         switch_state = MagicMock()
         switch_state.state = "on"
         boost_state = MagicMock()
@@ -1071,14 +1070,28 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=90 / 60)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
-            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()) as mock_update,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
             mock_coordinator.hass.states.get.side_effect = mock_get
@@ -1104,13 +1117,25 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=120 / 60)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
@@ -1135,13 +1160,25 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=10 / 60)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
@@ -1168,13 +1205,25 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=None)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
@@ -1201,13 +1250,25 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=special_state)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
             patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
@@ -1233,14 +1294,28 @@ class TestFiltration:
         mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=119.6 / 60)
 
         with (
-            patch.object(filtration, "get_switch_entity", return_value="switch.pool_pump"),
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
             patch.object(filtration, "search_entity", side_effect=mock_search),
-            patch.object(filtration, "get_filtration_attributes", return_value=(
-                "binary_sensor.filtration", MagicMock(), {"filtration_duration_minutes": 120}
-            )),
-            patch.object(filtration, "get_summer_filtration_duration", return_value=120),
-            patch.object(filtration, "async_stop_filtration", new=AsyncMock()) as mock_stop,
-            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()) as mock_update,
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    {"filtration_duration_minutes": 120},
+                ),
+            ),
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=120
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
             patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
         ):
             mock_coordinator.hass.states.get.side_effect = mock_get
