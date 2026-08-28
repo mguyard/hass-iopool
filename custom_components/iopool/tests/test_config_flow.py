@@ -26,7 +26,7 @@ from custom_components.iopool.const import (
 )
 from custom_components.iopool.models import IopoolOptionsData
 import pytest
-import voluptuous_serialize
+import voluptuous as vol
 
 from homeassistant import config_entries
 from homeassistant.const import CONF_API_KEY
@@ -35,6 +35,17 @@ from homeassistant.data_entry_flow import FlowResultType
 from homeassistant.helpers import config_validation as cv
 
 from .conftest import TEST_API_KEY, TEST_POOL_ID, TEST_POOL_TITLE
+
+# Home Assistant 2026.9 swapped its validation engine to Probatio and installs it
+# under the voluptuous name (home-assistant/core#175128), dropping
+# voluptuous-serialize. Its schemas are serialised by Probatio's own
+# to_field_list; earlier versions build real voluptuous schemas, which only
+# voluptuous-serialize understands. Key off the engine Home Assistant actually
+# installed, not off which package happens to be present in the environment.
+if vol.Schema.__module__.startswith("probatio"):
+    from probatio import to_field_list as _convert_schema
+else:
+    from voluptuous_serialize import convert as _convert_schema
 
 
 class TestGetIopoolData:
@@ -371,7 +382,7 @@ class TestIopoolOptionsFlow:
     @staticmethod
     def _serialize_options_form(result: dict) -> dict[str, dict]:
         """Serialize the options form and index filtration fields by name."""
-        serialized_schema = voluptuous_serialize.convert(
+        serialized_schema = _convert_schema(
             result["data_schema"], custom_serializer=cv.custom_serializer
         )
         filtration_section = next(
