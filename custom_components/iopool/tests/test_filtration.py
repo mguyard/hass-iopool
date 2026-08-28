@@ -1132,6 +1132,59 @@ class TestFiltration:
         assert event_payload["day_filtration_elapsed_percent"] is None
         mock_update.assert_called_once_with(next_stop_time=None, active_slot=None)
 
+    @pytest.mark.parametrize("elapsed_state", ["unavailable", "unknown", None])
+    async def test_stop_event_reports_null_elapsed_when_there_is_no_reading(
+        self,
+        filtration: Filtration,
+        mock_coordinator: MagicMock,
+        elapsed_state: str | None,
+    ) -> None:
+        """No usable reading must publish null, not zero.
+
+        Zero is indistinguishable from a pool that genuinely filtered nothing.
+        An automation compensating on a low percentage would then fire on a pool
+        that had in fact met its objective, and run the pump for nothing. The
+        three cases below all mean "no reading": the entity is missing
+        altogether, or it exists and reads unavailable / unknown.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "slot1_start_time": (now - timedelta(minutes=30)).isoformat(),
+            "filtration_duration_minutes": 120,
+        }
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=elapsed_state)
+
+        with (
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT1_END
+        event_payload = mock_publish.call_args[0][1]
+        # The objective is known, only the reading is missing.
+        assert event_payload["day_filtration_objective_minutes"] == 120
+        assert event_payload["day_filtration_elapsed_minutes"] is None
+        assert event_payload["day_filtration_elapsed_percent"] is None
+
     # ---------------------------------------------------------------------------
     # check_filtration_status — slot 2 summer catch-up branch (#103)
     # ---------------------------------------------------------------------------

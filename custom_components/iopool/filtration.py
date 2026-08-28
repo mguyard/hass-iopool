@@ -783,15 +783,20 @@ class Filtration:
                     day_filtration_objective_minutes = filtration_attributes.get(
                         "filtration_duration_minutes"
                     )
+                    # None, not 0, when there is no usable reading: zero is
+                    # indistinguishable from a pool that genuinely filtered
+                    # nothing, and an automation compensating on a low
+                    # percentage would fire on a pool that had met its
+                    # objective.
                     day_filtration_elapsed_minutes = (
                         float(elapsed_filtration_duration_state.state) * 60
                         if elapsed_filtration_duration_usable
-                        else 0
+                        else None
                     )
-                    # A missing or zero objective must not abort the stop. The
-                    # truthiness test covers None and 0 at once -- the latter
-                    # being a ZeroDivisionError the outer handler does not even
-                    # catch.
+                    # A missing reading or a missing objective must not abort
+                    # the stop. The truthiness test on the objective covers None
+                    # and 0 at once -- the latter being a ZeroDivisionError the
+                    # outer handler does not even catch.
                     day_filtration_elapsed_percent = (
                         round(
                             (
@@ -800,7 +805,8 @@ class Filtration:
                             )
                             * 100
                         )
-                        if day_filtration_objective_minutes
+                        if day_filtration_elapsed_minutes is not None
+                        and day_filtration_objective_minutes
                         else None
                     )
                     boost_end_time = (
