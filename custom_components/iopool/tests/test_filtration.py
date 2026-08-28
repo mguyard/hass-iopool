@@ -2,6 +2,7 @@
 
 from datetime import datetime, time, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+import zoneinfo
 
 from custom_components.iopool.const import (
     CONF_OPTIONS_FILTRATION,
@@ -21,7 +22,11 @@ from custom_components.iopool.const import (
     EVENT_TYPE_SLOT2_END,
     EVENT_TYPE_WINTER_END,
 )
-from custom_components.iopool.filtration import Filtration
+from custom_components.iopool.filtration import (
+    SLOT_START_MAX_RETRIES,
+    SLOT_START_RETRY_DELAY,
+    Filtration,
+)
 from custom_components.iopool.models import IopoolConfigData, IopoolConfigEntry
 import pytest
 
@@ -464,8 +469,12 @@ class TestFiltration:
 
             result = filtration.get_summer_filtration_duration()
             assert result is None
+            # The entity and the offending value are named, so the log points
+            # straight at what to look at.
             mock_logger.warning.assert_called_with(
-                "Filtration recommendation is not a valid number"
+                "Filtration recommendation sensor %s is not a valid number: %s",
+                "sensor.iopool_recommendation",
+                "invalid",
             )
 
     def test_get_summer_filtration_duration_no_state(
@@ -484,7 +493,8 @@ class TestFiltration:
             result = filtration.get_summer_filtration_duration()
             assert result is None
             mock_logger.warning.assert_called_with(
-                "Filtration recommendation entity not found"
+                "Filtration recommendation entity %s has no state",
+                "sensor.iopool_recommendation",
             )
 
     def test_get_filtration_pool_mode_no_data(
@@ -763,6 +773,195 @@ class TestFiltration:
             return None
 
         return switch_state, boost_mock, mock_search, mock_get
+
+    # ---------------------------------------------------------------------------
+    # slot start — retry while the recommendation sensor is unreadable (#110)
+    # ---------------------------------------------------------------------------
+
+    @staticmethod
+    def _make_slot_start_mocks(recommendation: str | None):
+        """Return (search, get) mocks whose recommendation sensor reads a value."""
+
+        def mock_search(platform, pattern):
+            if "filtration_recommendation" in pattern:
+                return "sensor.reco"
+            return None
+
+        def mock_get(eid):
+            if eid == "sensor.reco" and recommendation is not None:
+                state = MagicMock()
+                state.state = recommendation
+                return state
+            return None
+
+        return mock_search, mock_get
+
+    @pytest.mark.parametrize(
+        "trigger_name",
+        ["on_summer_filtration_slot1_trigger", "on_summer_filtration_slot2_trigger"],
+        ids=["slot1", "slot2"],
+    )
+    @pytest.mark.parametrize("recommendation", ["unavailable", "unknown", None])
+    async def test_slot_start_retries_when_the_recommendation_is_unreadable(
+        self,
+        filtration: Filtration,
+        mock_coordinator: MagicMock,
+        trigger_name: str,
+        recommendation: str | None,
+    ) -> None:
+        """An unreadable recommendation must schedule a retry, not lose the day.
+
+        The start triggers fire once a day through async_track_time_change. They
+        used to return early on an unreadable recommendation, so the pump never
+        started, no start event fired, and nothing rearmed: the whole day's
+        filtration was lost behind a single warning.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        mock_search, mock_get = self._make_slot_start_mocks(recommendation)
+
+        with (
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration, "async_start_filtration", new=AsyncMock()
+            ) as start,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as publish,
+            patch("custom_components.iopool.filtration.async_call_later") as mock_later,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await getattr(filtration, trigger_name)(now)
+
+        start.assert_not_called()
+        publish.assert_not_called()
+        mock_later.assert_called_once()
+        assert mock_later.call_args[0][1] == SLOT_START_RETRY_DELAY
+
+    @pytest.mark.parametrize(
+        "trigger_name",
+        ["on_summer_filtration_slot1_trigger", "on_summer_filtration_slot2_trigger"],
+        ids=["slot1", "slot2"],
+    )
+    async def test_slot_start_gives_up_after_the_last_attempt(
+        self,
+        filtration: Filtration,
+        mock_coordinator: MagicMock,
+        trigger_name: str,
+    ) -> None:
+        """The retry chain is bounded: the last attempt stops rearming.
+
+        Running on a stale objective would be worse than skipping, so the slot is
+        abandoned with an error rather than started on a value nobody can vouch
+        for.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        mock_search, mock_get = self._make_slot_start_mocks("unavailable")
+
+        with (
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration, "async_start_filtration", new=AsyncMock()
+            ) as start,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch("custom_components.iopool.filtration.async_call_later") as mock_later,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await getattr(filtration, trigger_name)(now, attempt=SLOT_START_MAX_RETRIES)
+
+        start.assert_not_called()
+        mock_later.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "trigger_name",
+        ["on_summer_filtration_slot1_trigger", "on_summer_filtration_slot2_trigger"],
+        ids=["slot1", "slot2"],
+    )
+    async def test_slot_start_proceeds_normally_once_the_sensor_recovers(
+        self,
+        filtration: Filtration,
+        mock_coordinator: MagicMock,
+        trigger_name: str,
+    ) -> None:
+        """A retry that finds a readable sensor starts the slot as usual."""
+        now = dt_util.now().replace(second=0, microsecond=0)
+        mock_search, mock_get = self._make_slot_start_mocks("480")
+
+        with (
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration, "async_start_filtration", new=AsyncMock()
+            ) as start,
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as publish,
+            patch("custom_components.iopool.filtration.async_call_later") as mock_later,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await getattr(filtration, trigger_name)(now, attempt=2)
+
+        start.assert_called_once()
+        publish.assert_called_once()
+        mock_later.assert_not_called()
+
+    @pytest.mark.parametrize(
+        "trigger_name",
+        ["on_summer_filtration_slot1_trigger", "on_summer_filtration_slot2_trigger"],
+        ids=["slot1", "slot2"],
+    )
+    async def test_slot_start_is_timezone_independent(
+        self,
+        filtration: Filtration,
+        mock_coordinator: MagicMock,
+        trigger_name: str,
+    ) -> None:
+        """The same instant must produce the same times, local or UTC.
+
+        async_track_time_change hands the trigger a local datetime, while
+        async_call_later -- which drives the retry -- hands it UTC. Deriving the
+        end time from whichever the caller passed would publish UTC timestamps in
+        the attributes and in the start event after a retry, so a dashboard would
+        show the wrong wall-clock time for the same instant.
+        """
+        # The default time zone is UTC under pytest, which would make local and
+        # UTC the same value and the comparison below vacuous.
+        previous_tz = dt_util.get_default_time_zone()
+        dt_util.set_default_time_zone(zoneinfo.ZoneInfo("Europe/Paris"))
+        try:
+            await self._collect_slot_start_times(
+                filtration, mock_coordinator, trigger_name
+            )
+        finally:
+            dt_util.set_default_time_zone(previous_tz)
+
+    async def _collect_slot_start_times(
+        self, filtration: Filtration, mock_coordinator: MagicMock, trigger_name: str
+    ) -> None:
+        """Run the trigger with the same instant as local and as UTC, and compare."""
+        local_now = dt_util.now().replace(second=0, microsecond=0)
+        utc_now = dt_util.as_utc(local_now)
+        assert local_now.utcoffset() != utc_now.utcoffset(), "fuseau non applique"
+        mock_search, mock_get = self._make_slot_start_mocks("480")
+        published = []
+
+        for moment in (local_now, utc_now):
+            with (
+                patch.object(filtration, "search_entity", side_effect=mock_search),
+                patch.object(filtration, "async_start_filtration", new=AsyncMock()),
+                patch.object(
+                    filtration, "update_filtration_attributes", new=AsyncMock()
+                ) as mock_update,
+                patch.object(
+                    filtration, "publish_event", new=AsyncMock()
+                ) as mock_publish,
+            ):
+                mock_coordinator.hass.states.get.side_effect = mock_get
+                await getattr(filtration, trigger_name)(moment)
+            published.append(
+                (
+                    mock_update.call_args.kwargs["next_stop_time"],
+                    mock_publish.call_args[0][1]["start_time"],
+                )
+            )
+
+        assert published[0] == published[1]
 
     async def test_check_filtration_status_slot1_end_event_fired(
         self, filtration: Filtration, mock_coordinator: MagicMock
