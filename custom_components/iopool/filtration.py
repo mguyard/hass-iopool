@@ -774,20 +774,34 @@ class Filtration:
                         await self.async_stop_filtration()
 
                     # Prepare common event data
-                    day_filtration_objective_minutes = (
-                        self.get_summer_filtration_duration()
+                    # The daily objective is mode-aware: binary_sensor.py writes
+                    # the summer recommendation in Standard mode and the
+                    # configured winter duration in Active-Winter. Reading it
+                    # back from the attributes keeps this event correct in every
+                    # mode, and drops the stop path's dependency on the cloud
+                    # API sensor along the way.
+                    day_filtration_objective_minutes = filtration_attributes.get(
+                        "filtration_duration_minutes"
                     )
                     day_filtration_elapsed_minutes = (
                         float(elapsed_filtration_duration_state.state) * 60
                         if elapsed_filtration_duration_usable
                         else 0
                     )
-                    day_filtration_elapsed_percent = round(
-                        (
-                            day_filtration_elapsed_minutes
-                            / day_filtration_objective_minutes
+                    # A missing or zero objective must not abort the stop. The
+                    # truthiness test covers None and 0 at once -- the latter
+                    # being a ZeroDivisionError the outer handler does not even
+                    # catch.
+                    day_filtration_elapsed_percent = (
+                        round(
+                            (
+                                day_filtration_elapsed_minutes
+                                / day_filtration_objective_minutes
+                            )
+                            * 100
                         )
-                        * 100
+                        if day_filtration_objective_minutes
+                        else None
                     )
                     boost_end_time = (
                         dt_util.parse_datetime(

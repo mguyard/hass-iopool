@@ -1025,6 +1025,113 @@ class TestFiltration:
         assert event_payload["duration_minutes"] == 0
         assert event_payload["start_time"] is None
 
+    async def test_winter_end_reports_the_configured_duration_as_objective(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """WINTER_END reports the configured winter duration as the objective.
+
+        In Active-Winter mode `binary_sensor.py` writes the configured winter
+        duration into `filtration_duration_minutes`, while
+        `get_summer_filtration_duration()` still returns the summer API
+        recommendation clamped by the summer min/max. The event must carry the
+        former: a pool that ran its full winter cycle is at 100%, not at a
+        fraction of an objective that does not apply to it.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = "winter"
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "winter_filtration_start": (now - timedelta(minutes=3)).isoformat(),
+            # Active-Winter: this attribute holds the configured winter duration
+            "filtration_duration_minutes": 3,
+        }
+        # 3 minutes elapsed against a 3-minute winter objective
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=3 / 60)
+
+        with (
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            # Deliberately different from the winter duration, so the assertions
+            # below pin down which of the two the event actually carries.
+            patch.object(
+                filtration, "get_summer_filtration_duration", return_value=240
+            ),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(filtration, "update_filtration_attributes", new=AsyncMock()),
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_WINTER_END
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["day_filtration_objective_minutes"] == 3
+        assert event_payload["day_filtration_elapsed_minutes"] == pytest.approx(3.0)
+        assert event_payload["day_filtration_elapsed_percent"] == 100
+
+    async def test_stop_event_survives_a_missing_daily_objective(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """A missing daily objective must not abort the whole stop sequence.
+
+        The objective is absent whenever the iopool recommendation sensor
+        cannot be read -- a cloud API outage is enough. Dividing by it raised a
+        TypeError that the outer `except (ValueError, TypeError)` swallowed, so
+        the end event never fired and next_stop_time was never cleared: the
+        pump stopped but the state stayed stale until the next slot.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        # No filtration_duration_minutes at all, and search_entity finds no
+        # recommendation entity either, so the objective is genuinely unknown.
+        filtration_attrs = {
+            "slot1_start_time": (now - timedelta(minutes=30)).isoformat(),
+        }
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours=0.5)
+
+        with (
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT1_END
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["day_filtration_objective_minutes"] is None
+        assert event_payload["day_filtration_elapsed_percent"] is None
+        mock_update.assert_called_once_with(next_stop_time=None, active_slot=None)
+
     # ---------------------------------------------------------------------------
     # check_filtration_status — slot 2 summer catch-up branch (#103)
     # ---------------------------------------------------------------------------
