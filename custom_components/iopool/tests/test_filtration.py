@@ -1286,6 +1286,41 @@ class TestFiltration:
         # The trailing clear, not a slot2_end_time push-back.
         assert "slot2_end_time" not in mock_update.call_args.kwargs
 
+    async def test_winter_start_rounds_the_end_time_to_the_minute(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """The winter end time must be rounded, like slot 1 and slot 2 are.
+
+        The periodic check fires at second 0 with a sub-second offset of its
+        own, and compares now_local >= next_stop_dt. An end time that carries
+        the microseconds of the start trigger is therefore missed whenever the
+        check's offset happens to be the smaller of the two, and the pump stops
+        a full minute late. Which of the two wins is decided by scheduling
+        jitter and changes at every Home Assistant restart, so the stop is late
+        roughly half the time.
+        """
+        # A start time with a non-zero second and microsecond, as a real
+        # trigger produces.
+        now = dt_util.now().replace(second=17, microsecond=432100)
+
+        with (
+            patch.object(filtration, "async_start_filtration", new=AsyncMock()),
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            await filtration.on_winter_filtration_start_trigger(now)
+
+        mock_update.assert_called_once()
+        stop_time = dt_util.parse_datetime(
+            mock_update.call_args.kwargs["next_stop_time"]
+        )
+        assert stop_time.second == 0
+        assert stop_time.microsecond == 0
+        # The published end_time must agree with the scheduled stop.
+        assert mock_publish.call_args[0][1]["end_time"] == stop_time.isoformat()
+
     # ---------------------------------------------------------------------------
     # check_filtration_status — slot 2 summer catch-up branch (#103)
     # ---------------------------------------------------------------------------

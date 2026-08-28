@@ -1088,7 +1088,12 @@ class Filtration:
         _, winter_duration = winter_result
 
         # Calculate end time
-        end_time = now + winter_duration
+        # Round to the minute, like slot 1 and slot 2 do. The periodic check
+        # fires at second 0 with a sub-second offset of its own and compares
+        # now_local >= next_stop_dt, so an end time carrying the microseconds of
+        # this trigger is missed whenever that offset is the smaller of the two
+        # -- and the pump then stops a full minute late.
+        end_time = (now + winter_duration).replace(second=0, microsecond=0)
 
         _LOGGER.debug(
             "Winter filtration started, duration: %s, end time: %s",
