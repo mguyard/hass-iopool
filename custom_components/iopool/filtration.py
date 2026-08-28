@@ -693,7 +693,7 @@ class Filtration:
                 elapsed_filtration_duration_entity = self.search_entity(
                     "sensor", f"iopool_.*_{SENSOR_ELAPSED_FILTRATION}$"
                 )
-                elapsed_filtration_duration_state: State = (
+                elapsed_filtration_duration_state: State | None = (
                     hass.states.get(elapsed_filtration_duration_entity)
                     if elapsed_filtration_duration_entity
                     else None
