@@ -4,7 +4,6 @@ from datetime import datetime, time, timedelta
 import logging
 import re
 
-from homeassistant.const import STATE_UNAVAILABLE, STATE_UNKNOWN
 from homeassistant.core import State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import async_entries_for_config_entry
@@ -704,25 +703,32 @@ class Filtration:
                     elapsed_filtration_duration_state,
                 )
 
-                # A sensor entity that exists but reads "unavailable"/"unknown"
-                # is truthy as a State object, unlike one that was never found
-                # (None). Both mean "no usable elapsed-duration reading right
-                # now", but only the None case short-circuited below before
-                # this guard -- the special-state one reached float() and
-                # raised, aborting the whole check silently and leaving the
-                # pump running past its scheduled stop.
-                elapsed_filtration_duration_usable = bool(
-                    elapsed_filtration_duration_state
-                ) and elapsed_filtration_duration_state.state not in (
-                    STATE_UNAVAILABLE,
-                    STATE_UNKNOWN,
-                )
+                # Convert once, here, rather than testing the state against
+                # a list of values it must not take. A sensor entity that exists
+                # is truthy as a State object even when it reads "unavailable"
+                # or "unknown", unlike one that was never found (None) -- and
+                # any other non-numeric string a source entity may produce means
+                # exactly the same thing to us. Guarding the conversion covers
+                # them all; enumerating them does not.
+                elapsed_filtration_duration_hours: float | None = None
+                if elapsed_filtration_duration_state is not None:
+                    try:
+                        elapsed_filtration_duration_hours = float(
+                            elapsed_filtration_duration_state.state
+                        )
+                    except ValueError, TypeError:
+                        _LOGGER.warning(
+                            "Elapsed filtration duration sensor %s is not a "
+                            "valid number: %s",
+                            elapsed_filtration_duration_entity,
+                            elapsed_filtration_duration_state.state,
+                        )
 
                 if next_stop_dt and now_local >= next_stop_dt:
                     # Check if active_slot is 2 and if elapsed filtration is enough
                     if (
                         self._active_slot == SECOND_SLOT
-                        and elapsed_filtration_duration_usable
+                        and elapsed_filtration_duration_hours is not None
                     ):
                         remaining_duration_min = round(
                             int(
@@ -730,7 +736,7 @@ class Filtration:
                                     "filtration_duration_minutes", 0
                                 )
                             )
-                            - (float(elapsed_filtration_duration_state.state) * 60)
+                            - (elapsed_filtration_duration_hours * 60)
                         )
                         _LOGGER.info(
                             "Remaining duration for slot #2 is %s minutes",
@@ -789,8 +795,8 @@ class Filtration:
                     # percentage would fire on a pool that had met its
                     # objective.
                     day_filtration_elapsed_minutes = (
-                        float(elapsed_filtration_duration_state.state) * 60
-                        if elapsed_filtration_duration_usable
+                        elapsed_filtration_duration_hours * 60
+                        if elapsed_filtration_duration_hours is not None
                         else None
                     )
                     # A missing reading or a missing objective must not abort

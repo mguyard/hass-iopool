@@ -1185,6 +1185,107 @@ class TestFiltration:
         assert event_payload["day_filtration_elapsed_minutes"] is None
         assert event_payload["day_filtration_elapsed_percent"] is None
 
+    async def test_stop_event_survives_a_non_numeric_elapsed_reading(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """A reading that is neither a number nor a known special state.
+
+        Listing "unavailable" and "unknown" only covers the two states Home
+        Assistant documents. Anything else a source entity may produce still
+        reaches float() and raises, and the ValueError is swallowed by the outer
+        handler -- the end event is lost and next_stop_time stays stale. Guard
+        the conversion itself rather than enumerating the values it rejects.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 1
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "slot1_start_time": (now - timedelta(minutes=30)).isoformat(),
+            "filtration_duration_minutes": 120,
+        }
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours="abc")
+
+        with (
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(filtration, "async_stop_filtration", new=AsyncMock()),
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT1_END
+        event_payload = mock_publish.call_args[0][1]
+        assert event_payload["day_filtration_elapsed_minutes"] is None
+        assert event_payload["day_filtration_elapsed_percent"] is None
+        mock_update.assert_called_once_with(next_stop_time=None, active_slot=None)
+
+    async def test_slot2_catchup_skipped_on_a_non_numeric_elapsed_reading(
+        self, filtration: Filtration, mock_coordinator: MagicMock
+    ) -> None:
+        """The catch-up branch must not be entered on an unparseable reading.
+
+        This is the other conversion site: the catch-up branch computes the
+        remaining duration from the same sensor. With an unparseable value it
+        used to raise before reaching async_stop_filtration(), leaving the pump
+        running past its scheduled slot 2 end for as long as the sensor stayed
+        that way.
+        """
+        now = dt_util.now().replace(second=0, microsecond=0)
+        filtration._active_slot = 2
+        filtration._next_stop_time = now.isoformat()
+        filtration_attrs = {
+            "slot2_start_time": (now - timedelta(minutes=30)).isoformat(),
+            "filtration_duration_minutes": 120,
+        }
+        mock_search, mock_get = self._make_catchup_mocks(elapsed_hours="abc")
+
+        with (
+            patch.object(
+                filtration, "get_switch_entity", return_value="switch.pool_pump"
+            ),
+            patch.object(filtration, "search_entity", side_effect=mock_search),
+            patch.object(
+                filtration,
+                "get_filtration_attributes",
+                return_value=(
+                    "binary_sensor.filtration",
+                    MagicMock(),
+                    filtration_attrs,
+                ),
+            ),
+            patch.object(
+                filtration, "async_stop_filtration", new=AsyncMock()
+            ) as mock_stop,
+            patch.object(
+                filtration, "update_filtration_attributes", new=AsyncMock()
+            ) as mock_update,
+            patch.object(filtration, "publish_event", new=AsyncMock()) as mock_publish,
+        ):
+            mock_coordinator.hass.states.get.side_effect = mock_get
+            await filtration.check_filtration_status(now)
+
+        mock_stop.assert_called_once()
+        mock_publish.assert_called_once()
+        assert mock_publish.call_args[0][0] == EVENT_TYPE_SLOT2_END
+        # The trailing clear, not a slot2_end_time push-back.
+        assert "slot2_end_time" not in mock_update.call_args.kwargs
+
     # ---------------------------------------------------------------------------
     # check_filtration_status — slot 2 summer catch-up branch (#103)
     # ---------------------------------------------------------------------------
