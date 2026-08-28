@@ -35,7 +35,7 @@
                         },
                         {
                             "type": "docs",
-                            "hidden": true
+                            "section": "📚 Documentation"
                         },
                         {
                             "type": "style",
@@ -88,7 +88,7 @@
                         },
                         {
                             "type": "docs",
-                            "hidden": true
+                            "section": "📚 Documentation"
                         },
                         {
                             "type": "style",

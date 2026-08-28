@@ -169,9 +169,38 @@ Depending on the event type, the `data` field contains:
   - `duration_minutes`: Duration of the slot/winter filtration in minutes
   - `boost_in_progress`: Current boost state (`None`, `1H`, `2H`, `4H`, etc.)
   - `remaining_boost_duration_minutes`: Minutes left in boost (if any)
-  - `day_filtration_objective_minutes`: Target filtration duration for the day
-  - `day_filtration_elapsed_minutes`: Elapsed filtration time for the day
-  - `day_filtration_elapsed_percent`: Percentage of daily objective reached
+  - `day_filtration_objective_minutes`: Target filtration duration for the day, or `null` if it cannot be determined
+  - `day_filtration_elapsed_minutes`: Elapsed filtration time for the day, or `null` when there is no usable reading
+  - `day_filtration_elapsed_percent`: Percentage of daily objective reached, or `null` when either value above is `null`
+
+<Warning>
+**The three `day_filtration_*` fields can be `null`.**
+
+They used to always carry a number, reporting `0` whenever the elapsed filtration
+sensor was `unavailable` or `unknown`. That was indistinguishable from a pool
+that had genuinely filtered nothing, and could lead a compensating automation to
+run the pump on a pool that had in fact already met its objective. These fields
+now report `null` when the value is unknown.
+
+The sensor is unreadable only transiently — while the recorder is busy, right
+after a Home Assistant restart, or if its source entity is renamed — so the
+fields carry a number the vast majority of the time.
+
+If your templates do arithmetic on them, guard against `null`:
+
+```yaml
+# Treat "no data" as zero
+{{ trigger.event.data.data.day_filtration_elapsed_percent | default(0) < 50 }}
+```
+
+Or skip the automation altogether when the reading is missing, which is usually
+what you want:
+
+```yaml
+{{ trigger.event.data.data.day_filtration_elapsed_percent is not none
+   and trigger.event.data.data.day_filtration_elapsed_percent < 50 }}
+```
+</Warning>
 
 ---
 

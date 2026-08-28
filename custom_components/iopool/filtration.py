@@ -693,7 +693,7 @@ class Filtration:
                 elapsed_filtration_duration_entity = self.search_entity(
                     "sensor", f"iopool_.*_{SENSOR_ELAPSED_FILTRATION}$"
                 )
-                elapsed_filtration_duration_state: State = (
+                elapsed_filtration_duration_state: State | None = (
                     hass.states.get(elapsed_filtration_duration_entity)
                     if elapsed_filtration_duration_entity
                     else None
@@ -703,11 +703,32 @@ class Filtration:
                     elapsed_filtration_duration_state,
                 )
 
+                # Convert once, here, rather than testing the state against
+                # a list of values it must not take. A sensor entity that exists
+                # is truthy as a State object even when it reads "unavailable"
+                # or "unknown", unlike one that was never found (None) -- and
+                # any other non-numeric string a source entity may produce means
+                # exactly the same thing to us. Guarding the conversion covers
+                # them all; enumerating them does not.
+                elapsed_filtration_duration_hours: float | None = None
+                if elapsed_filtration_duration_state is not None:
+                    try:
+                        elapsed_filtration_duration_hours = float(
+                            elapsed_filtration_duration_state.state
+                        )
+                    except ValueError, TypeError:
+                        _LOGGER.warning(
+                            "Elapsed filtration duration sensor %s is not a "
+                            "valid number: %s",
+                            elapsed_filtration_duration_entity,
+                            elapsed_filtration_duration_state.state,
+                        )
+
                 if next_stop_dt and now_local >= next_stop_dt:
                     # Check if active_slot is 2 and if elapsed filtration is enough
                     if (
                         self._active_slot == SECOND_SLOT
-                        and elapsed_filtration_duration_state
+                        and elapsed_filtration_duration_hours is not None
                     ):
                         remaining_duration_min = round(
                             int(
@@ -715,7 +736,7 @@ class Filtration:
                                     "filtration_duration_minutes", 0
                                 )
                             )
-                            - (float(elapsed_filtration_duration_state.state) * 60)
+                            - (elapsed_filtration_duration_hours * 60)
                         )
                         _LOGGER.info(
                             "Remaining duration for slot #2 is %s minutes",
@@ -759,20 +780,40 @@ class Filtration:
                         await self.async_stop_filtration()
 
                     # Prepare common event data
-                    day_filtration_objective_minutes = (
-                        self.get_summer_filtration_duration()
+                    # The daily objective is mode-aware: binary_sensor.py writes
+                    # the summer recommendation in Standard mode and the
+                    # configured winter duration in Active-Winter. Reading it
+                    # back from the attributes keeps this event correct in every
+                    # mode, and drops the stop path's dependency on the cloud
+                    # API sensor along the way.
+                    day_filtration_objective_minutes = filtration_attributes.get(
+                        "filtration_duration_minutes"
                     )
+                    # None, not 0, when there is no usable reading: zero is
+                    # indistinguishable from a pool that genuinely filtered
+                    # nothing, and an automation compensating on a low
+                    # percentage would fire on a pool that had met its
+                    # objective.
                     day_filtration_elapsed_minutes = (
-                        float(elapsed_filtration_duration_state.state) * 60
-                        if elapsed_filtration_duration_state
-                        else 0
+                        elapsed_filtration_duration_hours * 60
+                        if elapsed_filtration_duration_hours is not None
+                        else None
                     )
-                    day_filtration_elapsed_percent = round(
-                        (
-                            day_filtration_elapsed_minutes
-                            / day_filtration_objective_minutes
+                    # A missing reading or a missing objective must not abort
+                    # the stop. The truthiness test on the objective covers None
+                    # and 0 at once -- the latter being a ZeroDivisionError the
+                    # outer handler does not even catch.
+                    day_filtration_elapsed_percent = (
+                        round(
+                            (
+                                day_filtration_elapsed_minutes
+                                / day_filtration_objective_minutes
+                            )
+                            * 100
                         )
-                        * 100
+                        if day_filtration_elapsed_minutes is not None
+                        and day_filtration_objective_minutes
+                        else None
                     )
                     boost_end_time = (
                         dt_util.parse_datetime(
@@ -1047,7 +1088,12 @@ class Filtration:
         _, winter_duration = winter_result
 
         # Calculate end time
-        end_time = now + winter_duration
+        # Round to the minute, like slot 1 and slot 2 do. The periodic check
+        # fires at second 0 with a sub-second offset of its own and compares
+        # now_local >= next_stop_dt, so an end time carrying the microseconds of
+        # this trigger is missed whenever that offset is the smaller of the two
+        # -- and the pump then stops a full minute late.
+        end_time = (now + winter_duration).replace(second=0, microsecond=0)
 
         _LOGGER.debug(
             "Winter filtration started, duration: %s, end time: %s",
