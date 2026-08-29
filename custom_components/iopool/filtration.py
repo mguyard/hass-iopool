@@ -1,13 +1,14 @@
 """Filtration logic for integration."""
 
 from datetime import datetime, time, timedelta
+from functools import partial
 import logging
 import re
 
 from homeassistant.core import State
 from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.entity_registry import async_entries_for_config_entry
-from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.event import async_call_later, async_track_time_change
 from homeassistant.util import dt as dt_util
 
 from .const import (
@@ -44,6 +45,15 @@ _LOGGER = logging.getLogger(__name__)
 # Summer filtration is split in two slots; the second one is the catch-up slot,
 # whose end time is recomputed from the filtration already elapsed that day.
 SECOND_SLOT = 2
+
+# A slot start trigger fires once a day. When the iopool recommendation cannot be
+# read at that exact minute, the whole day's filtration used to be lost with no
+# second chance. Measured on a live installation, the sensor was unreadable once
+# in 60 days and for under a second, so a quarter of an hour of retries is a wide
+# margin over anything observed -- while still refusing to start on a stale
+# objective.
+SLOT_START_RETRY_DELAY = 180
+SLOT_START_MAX_RETRIES = 5
 
 
 class Filtration:
@@ -353,14 +363,21 @@ class Filtration:
             recommendation_entity
         )
         if not recommendation_state:
-            _LOGGER.warning("Filtration recommendation entity not found")
+            _LOGGER.warning(
+                "Filtration recommendation entity %s has no state",
+                recommendation_entity,
+            )
             return None
 
         try:
             # Convert the state to a number
             recommended_duration = int(float(recommendation_state.state))
         except ValueError, TypeError:
-            _LOGGER.warning("Filtration recommendation is not a valid number")
+            _LOGGER.warning(
+                "Filtration recommendation sensor %s is not a valid number: %s",
+                recommendation_entity,
+                recommendation_state.state,
+            )
             return None
 
         # Get min and max durations from summer configuration
@@ -693,7 +710,7 @@ class Filtration:
                 elapsed_filtration_duration_entity = self.search_entity(
                     "sensor", f"iopool_.*_{SENSOR_ELAPSED_FILTRATION}$"
                 )
-                elapsed_filtration_duration_state: State = (
+                elapsed_filtration_duration_state: State | None = (
                     hass.states.get(elapsed_filtration_duration_entity)
                     if elapsed_filtration_duration_entity
                     else None
@@ -703,11 +720,32 @@ class Filtration:
                     elapsed_filtration_duration_state,
                 )
 
+                # Convert once, here, rather than testing the state against
+                # a list of values it must not take. A sensor entity that exists
+                # is truthy as a State object even when it reads "unavailable"
+                # or "unknown", unlike one that was never found (None) -- and
+                # any other non-numeric string a source entity may produce means
+                # exactly the same thing to us. Guarding the conversion covers
+                # them all; enumerating them does not.
+                elapsed_filtration_duration_hours: float | None = None
+                if elapsed_filtration_duration_state is not None:
+                    try:
+                        elapsed_filtration_duration_hours = float(
+                            elapsed_filtration_duration_state.state
+                        )
+                    except ValueError, TypeError:
+                        _LOGGER.warning(
+                            "Elapsed filtration duration sensor %s is not a "
+                            "valid number: %s",
+                            elapsed_filtration_duration_entity,
+                            elapsed_filtration_duration_state.state,
+                        )
+
                 if next_stop_dt and now_local >= next_stop_dt:
                     # Check if active_slot is 2 and if elapsed filtration is enough
                     if (
                         self._active_slot == SECOND_SLOT
-                        and elapsed_filtration_duration_state
+                        and elapsed_filtration_duration_hours is not None
                     ):
                         remaining_duration_min = round(
                             int(
@@ -715,7 +753,7 @@ class Filtration:
                                     "filtration_duration_minutes", 0
                                 )
                             )
-                            - (float(elapsed_filtration_duration_state.state) * 60)
+                            - (elapsed_filtration_duration_hours * 60)
                         )
                         _LOGGER.info(
                             "Remaining duration for slot #2 is %s minutes",
@@ -759,20 +797,40 @@ class Filtration:
                         await self.async_stop_filtration()
 
                     # Prepare common event data
-                    day_filtration_objective_minutes = (
-                        self.get_summer_filtration_duration()
+                    # The daily objective is mode-aware: binary_sensor.py writes
+                    # the summer recommendation in Standard mode and the
+                    # configured winter duration in Active-Winter. Reading it
+                    # back from the attributes keeps this event correct in every
+                    # mode, and drops the stop path's dependency on the cloud
+                    # API sensor along the way.
+                    day_filtration_objective_minutes = filtration_attributes.get(
+                        "filtration_duration_minutes"
                     )
+                    # None, not 0, when there is no usable reading: zero is
+                    # indistinguishable from a pool that genuinely filtered
+                    # nothing, and an automation compensating on a low
+                    # percentage would fire on a pool that had met its
+                    # objective.
                     day_filtration_elapsed_minutes = (
-                        float(elapsed_filtration_duration_state.state) * 60
-                        if elapsed_filtration_duration_state
-                        else 0
+                        elapsed_filtration_duration_hours * 60
+                        if elapsed_filtration_duration_hours is not None
+                        else None
                     )
-                    day_filtration_elapsed_percent = round(
-                        (
-                            day_filtration_elapsed_minutes
-                            / day_filtration_objective_minutes
+                    # A missing reading or a missing objective must not abort
+                    # the stop. The truthiness test on the objective covers None
+                    # and 0 at once -- the latter being a ZeroDivisionError the
+                    # outer handler does not even catch.
+                    day_filtration_elapsed_percent = (
+                        round(
+                            (
+                                day_filtration_elapsed_minutes
+                                / day_filtration_objective_minutes
+                            )
+                            * 100
                         )
-                        * 100
+                        if day_filtration_elapsed_minutes is not None
+                        and day_filtration_objective_minutes
+                        else None
                     )
                     boost_end_time = (
                         dt_util.parse_datetime(
@@ -884,7 +942,53 @@ class Filtration:
             # Catch any exception that might occur
             _LOGGER.exception("Error in periodic check")
 
-    async def on_summer_filtration_slot1_trigger(self, now: datetime) -> None:
+    def _retry_slot_start(self, slot: int, attempt: int) -> bool:
+        """Rearm a slot start trigger while the recommendation stays unreadable.
+
+        Returns True when a retry was scheduled, False when the budget is spent
+        and the slot has to be abandoned for the day.
+
+        The slot start triggers fire once a day, so an unreadable recommendation
+        at that exact minute used to cost the whole day's filtration. Retrying
+        buys a fresh reading rather than falling back on a cached one: a stale
+        objective is a worse basis for running a pump than a late start.
+        """
+
+        if attempt >= SLOT_START_MAX_RETRIES:
+            _LOGGER.error(
+                "Filtration recommendation still unreadable after %s attempts over "
+                "%s minutes, slot #%s skipped for today",
+                SLOT_START_MAX_RETRIES,
+                SLOT_START_MAX_RETRIES * SLOT_START_RETRY_DELAY // 60,
+                slot,
+            )
+            return False
+
+        _LOGGER.warning(
+            "Filtration recommendation unreadable at slot #%s start, retrying in "
+            "%s minutes (attempt %s of %s)",
+            slot,
+            SLOT_START_RETRY_DELAY // 60,
+            attempt + 1,
+            SLOT_START_MAX_RETRIES,
+        )
+        trigger = (
+            self.on_summer_filtration_slot2_trigger
+            if slot == SECOND_SLOT
+            else self.on_summer_filtration_slot1_trigger
+        )
+        cancel = async_call_later(
+            self._entry.runtime_data.coordinator.hass,
+            SLOT_START_RETRY_DELAY,
+            partial(trigger, attempt=attempt + 1),
+        )
+        # Cleared on reload and on unload, alongside the daily triggers.
+        self._entry.runtime_data.remove_time_listeners.append(cancel)
+        return True
+
+    async def on_summer_filtration_slot1_trigger(
+        self, now: datetime, attempt: int = 0
+    ) -> None:
         """Handle the summer filtration slot 1 trigger event.
 
         This method is triggered daily at the configured start time for summer filtration slot 1.
@@ -904,12 +1008,17 @@ class Filtration:
 
         """
 
+        # async_track_time_change hands us local time, async_call_later -- which
+        # drives the retry below -- hands us UTC. Normalise, so the times we
+        # publish never depend on which of the two scheduled this run.
+        now = dt_util.as_local(now)
+
         _LOGGER.debug("Executing summer filtration slot 1 daily trigger at %s", now)
 
         # Calculate filtration duration for slot 1
         filtration_duration = self.get_summer_filtration_duration()
         if filtration_duration is None:
-            _LOGGER.warning("Could not determine filtration duration for slot 1")
+            self._retry_slot_start(1, attempt)
             return
 
         # Calculate slot 1 percentage
@@ -953,7 +1062,9 @@ class Filtration:
             },
         )
 
-    async def on_summer_filtration_slot2_trigger(self, now: datetime) -> None:
+    async def on_summer_filtration_slot2_trigger(
+        self, now: datetime, attempt: int = 0
+    ) -> None:
         """Handle the daily trigger for summer filtration slot 2.
 
         This method is triggered at the scheduled time for the second filtration slot in summer mode.
@@ -968,12 +1079,17 @@ class Filtration:
 
         """
 
+        # async_track_time_change hands us local time, async_call_later -- which
+        # drives the retry below -- hands us UTC. Normalise, so the times we
+        # publish never depend on which of the two scheduled this run.
+        now = dt_util.as_local(now)
+
         _LOGGER.debug("Executing summer filtration slot 2 daily trigger at %s", now)
 
         # Calculate filtration duration for slot 2
         filtration_duration = self.get_summer_filtration_duration()
         if filtration_duration is None:
-            _LOGGER.warning("Could not determine filtration duration for slot 2")
+            self._retry_slot_start(2, attempt)
             return
 
         # Calculate slot 2 percentage
@@ -1047,7 +1163,12 @@ class Filtration:
         _, winter_duration = winter_result
 
         # Calculate end time
-        end_time = now + winter_duration
+        # Round to the minute, like slot 1 and slot 2 do. The periodic check
+        # fires at second 0 with a sub-second offset of its own and compares
+        # now_local >= next_stop_dt, so an end time carrying the microseconds of
+        # this trigger is missed whenever that offset is the smaller of the two
+        # -- and the pump then stops a full minute late.
+        end_time = (now + winter_duration).replace(second=0, microsecond=0)
 
         _LOGGER.debug(
             "Winter filtration started, duration: %s, end time: %s",
