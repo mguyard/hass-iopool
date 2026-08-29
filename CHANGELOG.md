@@ -1,3 +1,22 @@
+## [1.3.2-beta.4](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.3...v1.3.2-beta.4) (2026-08-29)
+
+### 🐛 Bug Fixes
+
+* **filtration:** guard the elapsed sensor conversion instead of listing states ([0a7f711](https://github.com/mguyard/hass-iopool/commit/0a7f7112973850f904b16101c4e0a0f3171bc6ab))
+* **filtration:** report null instead of 0 when elapsed filtration is unknown ([ce7df7e](https://github.com/mguyard/hass-iopool/commit/ce7df7ece64f55fad416b5050c00a1210b310912))
+* **filtration:** report the configured duration as the daily objective ([49d565b](https://github.com/mguyard/hass-iopool/commit/49d565b4e1edf465bdf93d03e581149488872c49)), closes [#110](https://github.com/mguyard/hass-iopool/issues/110)
+* **filtration:** retry a slot start while the recommendation is unreadable ([da35382](https://github.com/mguyard/hass-iopool/commit/da35382015cf9b62bd654a70f034607cfa714606)), closes [#110](https://github.com/mguyard/hass-iopool/issues/110)
+* **filtration:** round the winter filtration end time to the minute ([5745c85](https://github.com/mguyard/hass-iopool/commit/5745c85e0e7ae1e3df6adfe5688f6ecb840e6b7c))
+* **filtration:** stop the pump when the elapsed-duration sensor is unavailable ([3425b56](https://github.com/mguyard/hass-iopool/commit/3425b56e85b264aebf32f5f4d765c93993330ab9)), closes [#103](https://github.com/mguyard/hass-iopool/issues/103) [#103](https://github.com/mguyard/hass-iopool/issues/103) [#103](https://github.com/mguyard/hass-iopool/issues/103)
+
+### ♻️ Code Refactoring
+
+* **filtration:** type the elapsed sensor state as State | None ([9ad92c0](https://github.com/mguyard/hass-iopool/commit/9ad92c0dd4e79654a7a397017b9628df37398b19))
+
+### 📚 Documentation
+
+* **events:** day_filtration_* fields can now be null in stop events ([626d99f](https://github.com/mguyard/hass-iopool/commit/626d99f19f2f0913329a7b83f4ae089cf0031c27))
+
 ## [1.3.2-beta.3](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.2...v1.3.2-beta.3) (2026-08-14)
 
 ### 🐛 Bug Fixes
