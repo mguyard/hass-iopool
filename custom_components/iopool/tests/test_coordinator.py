@@ -6,7 +6,12 @@ import json
 import logging
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from aiohttp.client_exceptions import ClientError, ServerTimeoutError
+from aiohttp.client_exceptions import (
+    ClientConnectorDNSError,
+    ClientError,
+    ClientResponseError,
+    ServerTimeoutError,
+)
 from custom_components.iopool.api_models import IopoolAPIResponse
 from custom_components.iopool.coordinator import (
     IopoolDataUpdateCoordinator,
@@ -118,7 +123,51 @@ class TestIopoolDataUpdateCoordinator:
 
         coordinator.session = MockSession()
 
-        with pytest.raises(UpdateFailed, match="Error communicating with API"):
+        with pytest.raises(UpdateFailed, match="Timeout while contacting iopool API"):
+            await coordinator._async_update_data()
+
+    @pytest.mark.parametrize(
+        ("error", "expected"),
+        [
+            (
+                ClientConnectorDNSError(
+                    MagicMock(host="api.iopool.com", port=443, ssl=True),
+                    OSError(None, "DNS server returned answer with no data"),
+                ),
+                r"^Cannot resolve api\.iopool\.com: DNS server returned answer with no data$",
+            ),
+            (TimeoutError(), r"^Timeout while contacting iopool API$"),
+            (
+                ClientResponseError(MagicMock(), (), status=503, message="Down"),
+                r"^iopool API returned HTTP 503: Down$",
+            ),
+            (ClientError("reset"), r"^Error communicating with API: reset$"),
+        ],
+        ids=["dns", "total_timeout", "http_status", "other_client_error"],
+    )
+    @patch("homeassistant.helpers.frame.report_usage")
+    @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
+    @patch("homeassistant.helpers.aiohttp_client.async_get_clientsession")
+    async def test_async_update_data_names_the_failure(
+        self,
+        mock_session,
+        mock_zeroconf,
+        mock_report: AsyncMock,
+        hass: HomeAssistant,
+        error: Exception,
+        expected: str,
+    ) -> None:
+        """Each kind of network failure yields a message that says what failed."""
+        mock_session.return_value = MagicMock()
+        coordinator = IopoolDataUpdateCoordinator(hass, TEST_API_KEY)
+
+        class MockSession:
+            def get(self, *args, **kwargs):
+                raise error
+
+        coordinator.session = MockSession()
+
+        with pytest.raises(UpdateFailed, match=expected):
             await coordinator._async_update_data()
 
     @patch("homeassistant.helpers.frame.report_usage")
@@ -493,6 +542,55 @@ class TestIopoolDataUpdateCoordinatorIntegration:
         # debug logs into GitHub issues.
         assert TEST_API_KEY not in caplog.text
         assert any(f"***{TEST_API_KEY[-4:]}" in msg for msg in debug_messages)
+
+    @pytest.mark.parametrize(
+        "error",
+        [ClientError("DNS server returned answer with no data"), ValueError("bad")],
+        ids=["network_error", "parse_error"],
+    )
+    @patch("homeassistant.helpers.frame.report_usage")
+    @patch("homeassistant.components.zeroconf.async_get_async_zeroconf")
+    @patch("homeassistant.helpers.aiohttp_client.async_get_clientsession")
+    async def test_consecutive_failures_log_a_single_error(
+        self,
+        mock_session,
+        mock_zeroconf,
+        mock_report: AsyncMock,
+        hass: HomeAssistant,
+        caplog,
+        error: Exception,
+    ) -> None:
+        """A failing API is reported once, not on every poll."""
+        mock_session.return_value = MagicMock()
+        coordinator = IopoolDataUpdateCoordinator(hass, TEST_API_KEY)
+
+        class MockSession:
+            def get(self, *args, **kwargs):
+                class MockContextManager:
+                    async def __aenter__(self):
+                        class MockResponse:
+                            async def json(self):
+                                raise error
+
+                            def raise_for_status(self):
+                                pass
+
+                        return MockResponse()
+
+                    async def __aexit__(self, *args):
+                        pass
+
+                return MockContextManager()
+
+        coordinator.session = MockSession()
+
+        with caplog.at_level(logging.ERROR):
+            await coordinator.async_refresh()
+            await coordinator.async_refresh()
+
+        errors = [r for r in caplog.records if r.levelno >= logging.ERROR]
+        assert len(errors) == 1
+        assert coordinator.last_update_success is False
 
 
 class TestObfuscateApiKey:

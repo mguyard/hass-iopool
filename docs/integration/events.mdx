@@ -190,7 +190,7 @@ If your templates do arithmetic on them, guard against `null`:
 
 ```yaml
 # Treat "no data" as zero
-{{ trigger.event.data.data.day_filtration_elapsed_percent | default(0) < 50 }}
+{{ 50 > trigger.event.data.data.day_filtration_elapsed_percent | default(0) }}
 ```
 
 Or skip the automation altogether when the reading is missing, which is usually
@@ -198,7 +198,7 @@ what you want:
 
 ```yaml
 {{ trigger.event.data.data.day_filtration_elapsed_percent is not none
-   and trigger.event.data.data.day_filtration_elapsed_percent < 50 }}
+   and 50 > trigger.event.data.data.day_filtration_elapsed_percent }}
 ```
 </Warning>
 

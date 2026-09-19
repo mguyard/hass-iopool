@@ -174,6 +174,68 @@ filtration: // [!code highlight]
     min_duration: 60
 ```
 
+### 4.1 docs.page escapes `<`, everywhere, including inside code blocks
+
+docs.page escapes any `<` that cannot open a tag, and its code renderer never decodes the entity back.
+The reader sees a literal `&lt;` and copies broken YAML into their automation.
+This is not about being inside a `<Warning>` or a `<Card>` — a fenced block at the top level breaks the same way.
+
+The only thing that matters is the character following the `<`:
+
+| Written in the source | Rendered |
+|---|---|
+| `a <EVENT>` — a letter follows | `a <EVENT>` ✅ |
+| `a </x` — a slash follows | `a </x` ✅ |
+| `a > 50`, `a >= 50` | unaffected ✅ |
+| `a < 50` — a space follows | `a &lt; 50` ❌ |
+| `a <50` — a digit follows | `a &lt;50` ❌ |
+| `a <= 50` | `a &lt;= 50` ❌ |
+| `a &lt; 50` — HTML entity | `a &lt; 50` ❌ |
+| `a &#60; 50` — numeric reference | `a &#60; 50` ❌ |
+
+No escape works: not `&lt;`, not `&#60;`, not `\<`.
+Four-space indented code blocks are not rendered at all, so they are no way out either.
+
+**Write the comparison so that no bare `<` appears.**
+Put the constant first and use `>`, which keeps the meaning exactly:
+
+```yaml
+{{ 50 > trigger.event.data.data.day_filtration_elapsed_percent | default(0) }}
+```
+
+`|` binds tighter than `>` in Jinja, so this is `50 > (x | default(0))`.
+Jinja's `is lt` test also renders correctly, but it is unfamiliar to most Home Assistant users.
+
+Verified against the live pipeline on 2026-08-29 with the method in §4.2.
+If a future docs.page release fixes it, re-run those cases before relying on `<` again.
+
+### 4.2 Verifying the rendering locally
+
+Never assume a page renders as written — `curl` on a docs.page URL returns the raw MDX, not the DOM, so it proves nothing.
+Render the local working tree through the real pipeline instead:
+
+```bash
+npx -y @docs.page/cli preview --port 7788 --no-browser
+```
+
+It watches the repository root and streams the local files to the hosted renderer.
+It prints a preview URL; append the page path after `/preview` to reach a specific page:
+
+```
+https://docspage-production.up.railway.app/preview/integration/events?url=ws%3A%2F%2Flocalhost%3A7788
+```
+
+Opening it in a normal browser is enough for a visual check.
+To assert on the output, drive it with Playwright and read `pre` elements — Chromium blocks the websocket to localhost from a public origin, so the flag is required:
+
+```js
+chromium.launch({ args: ['--disable-features=LocalNetworkAccessChecks,PrivateNetworkAccessChecks,BlockInsecurePrivateNetworkRequests'] })
+```
+
+Grepping the rendered text for `&lt;` is the check that catches the trap in §4.1.
+
+---
+
 ---
 
 ## 5. docs.json — Navigation Registration
