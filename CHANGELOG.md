@@ -1,3 +1,13 @@
+## [1.3.2-beta.5](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.4...v1.3.2-beta.5) (2026-09-19)
+
+### 🐛 Bug Fixes
+
+* **coordinator:** 🐛 Log API failures once, naming their cause ([574807d](https://github.com/mguyard/hass-iopool/commit/574807da236a17d54741c11e6cc025f58948e220)), closes [#119](https://github.com/mguyard/hass-iopool/issues/119)
+
+### 📚 Documentation
+
+* **events:** 📝 Avoid < in code samples, docs.page mangles it ([438d40f](https://github.com/mguyard/hass-iopool/commit/438d40fb05342ac8bccb710415d9fb4bb5b93dc4)), closes [#60](https://github.com/mguyard/hass-iopool/issues/60)
+
 ## [1.3.2-beta.4](https://github.com/mguyard/hass-iopool/compare/v1.3.2-beta.3...v1.3.2-beta.4) (2026-08-29)
 
 ### 🐛 Bug Fixes
