@@ -5,7 +5,11 @@
 import logging
 
 # from pathlib import Path
-from aiohttp.client_exceptions import ClientError, ServerTimeoutError
+from aiohttp.client_exceptions import (
+    ClientConnectorDNSError,
+    ClientError,
+    ClientResponseError,
+)
 
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
@@ -93,9 +97,19 @@ class IopoolDataUpdateCoordinator(DataUpdateCoordinator):
                 )
                 return IopoolAPIResponse.from_dict(data)
 
-        except (ServerTimeoutError, ClientError) as error:
-            _LOGGER.error("Error fetching data from iopool API: %s", error)
+        except ClientConnectorDNSError as error:
+            raise UpdateFailed(
+                f"Cannot resolve {error.host}: {error.os_error.strerror}"
+            ) from error
+        # aiohttp raises a bare TimeoutError, not a ClientError, when the
+        # request's total timeout expires.
+        except TimeoutError as error:
+            raise UpdateFailed("Timeout while contacting iopool API") from error
+        except ClientResponseError as error:
+            raise UpdateFailed(
+                f"iopool API returned HTTP {error.status}: {error.message}"
+            ) from error
+        except ClientError as error:
             raise UpdateFailed(f"Error communicating with API: {error}") from error
         except (KeyError, ValueError) as error:
-            _LOGGER.error("Error parsing response from iopool API: %s", error)
             raise UpdateFailed(f"Error parsing API response: {error}") from error
